@@ -1,0 +1,1485 @@
+<!doctype html>
+<!-- Sistem KPI BKK Jateng v1.1.0 | 2026-10-30 | Prototype HTML offline. Changelog: navigasi mobile, satu KPI per langkah, input angka Indonesia, ringkasan progres, tema portal BKK. -->
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>Sistem KPI Pegawai BKK Jateng</title>
+<style>
+:root{--navy:#112c4b;--blue:#1d60b6;--gold:#c69c4b;--ink:#203249;--muted:#687b91;--bg:#f3f6fa;--line:#e2e8f0;--green:#087e73;--red:#be3746;--amber:#946410}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 'Segoe UI',Arial,sans-serif}button,input,select,textarea{font:inherit}button,a,input,select,textarea{outline-offset:3px}button{cursor:pointer}a{color:var(--blue)}button:disabled{opacity:.45;cursor:not-allowed}.shell{display:grid;grid-template-columns:246px 1fr;min-height:100vh}.sidebar{background:var(--navy);color:white;padding:27px 18px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}.brand{display:flex;gap:11px;align-items:center;padding:0 9px 28px}.brandmark{background:linear-gradient(140deg,#d9b873,#bc8d35);border-radius:12px;color:#112c4b;width:43px;height:43px;display:grid;place-items:center;font-size:21px;font-weight:800}.brand strong{font-size:17px;display:block;letter-spacing:.4px}.brand small{color:#b8c9de;font-size:11px}.navlabel{font-size:10px;letter-spacing:1.5px;color:#8fa8c3;margin:12px 14px 8px}.navbutton{display:flex;align-items:center;gap:12px;border:0;background:none;color:#b8cbe0;width:100%;padding:12px 14px;text-align:left;border-radius:8px;margin:2px 0}.navbutton.active{background:#244464;color:#fff;box-shadow:inset 3px 0 var(--gold)}.navbutton:hover{background:#213f5d;color:#fff}.navicon{font-size:17px;width:21px;text-align:center}.sidebarfoot{margin-top:auto;padding:18px 10px 0;color:#a5bad2;font-size:11px}.sidebarfoot b{display:block;color:#d6b777;margin-bottom:5px}.workspace{min-width:0}.topbar{height:78px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 36px}.crumb{color:var(--muted);font-size:12px}.topbar-right{display:flex;gap:12px;align-items:center}.avatar{width:35px;height:35px;background:#eaf0f8;border-radius:50%;display:grid;place-items:center;color:var(--navy);font-weight:bold}.sim{color:var(--amber);background:#fff5dc;border:1px solid #efdfb6;padding:4px 9px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.5px}.topselect{max-width:165px;border:0;background:#f3f6fa;border-radius:6px;padding:7px}.content{padding:30px 36px 42px;max-width:1680px;margin:auto}.pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:24px}.eyebrow{font-size:10px;letter-spacing:1.6px;font-weight:700;color:var(--green);text-transform:uppercase;margin-bottom:6px}h1{font-size:27px;line-height:1.25;margin:0 0 7px;letter-spacing:-.5px}h2{font-size:17px;margin:0}h3{font-size:15px;margin:0 0 9px}.muted{color:var(--muted)}.small{font-size:12px}.actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.btn{border:1px solid var(--line);border-radius:7px;background:white;color:var(--ink);padding:9px 14px;font-size:12px;font-weight:600;display:inline-flex;gap:7px;align-items:center;justify-content:center;text-decoration:none}.btn.primary{background:var(--blue);border-color:var(--blue);color:white}.btn.danger{color:var(--red);border-color:#f0cdd1}.btn.gold{background:#fff5df;border-color:#ebd6a6;color:#835f20}.btn.tiny{padding:5px 8px;font-size:11px}.btn:hover{filter:brightness(.97)}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:22px}.stat,.card{background:white;border:1px solid var(--line);border-radius:11px;box-shadow:0 2px 5px #15314d03}.stat{padding:20px 22px;position:relative}.stat .label{font-size:12px;color:var(--muted);margin-bottom:10px}.stat .value{font-size:31px;line-height:1.2;font-weight:700;letter-spacing:-1px}.stat .sub{font-size:11px;color:var(--muted);margin-top:9px}.stat .accent{position:absolute;right:20px;top:20px;width:30px;height:30px;border-radius:7px;background:#edf4fc;color:var(--blue);display:grid;place-items:center}.stat.gold .accent{background:#fff5df;color:#a17825}.card{padding:22px;margin-bottom:20px}.cardhead{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-bottom:19px}.grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:20px}.grid2.equal{grid-template-columns:1fr 1fr}.barrow{display:grid;grid-template-columns:160px 1fr 45px;gap:15px;align-items:center;margin:16px 0;font-size:12px}.track{height:8px;background:#edf1f6;border-radius:10px;overflow:hidden}.bar{height:100%;background:var(--blue);border-radius:10px}.bar.gold{background:var(--gold)}.bar.green{background:var(--green)}.badge{display:inline-block;padding:4px 9px;font-size:10px;line-height:1.4;border-radius:5px;background:#eef3f8;color:#55708c;font-weight:700;white-space:nowrap}.badge.green{background:#e8f5f0;color:#197963}.badge.blue{background:#e8f0fc;color:#285faa}.badge.gold{background:#fff3dc;color:#916920}.badge.red{background:#fcecef;color:#b23f50}.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}th{background:#f5f8fc;color:#6d8097;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;padding:13px 12px;border-bottom:1px solid var(--line);white-space:nowrap}td{padding:14px 12px;border-bottom:1px solid #edf1f5;vertical-align:top}tr:last-child td{border-bottom:0}td strong{font-weight:600;color:#253e59}.number{text-align:right;font-variant-numeric:tabular-nums}.numfont{font-variant-numeric:tabular-nums}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}.toolbar input{min-width:240px}.field,input,select,textarea{border:1px solid #dce4ed;border-radius:6px;padding:9px 11px;background:white;color:var(--ink)}input[type=number]{font-variant-numeric:tabular-nums;min-width:0}textarea{width:100%;min-height:80px;resize:vertical}.fieldgroup{display:flex;flex-direction:column;gap:6px;margin:0 0 15px}.fieldgroup label{font-size:11px;font-weight:600;color:#61768e}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.full{grid-column:1/-1}.helper{font-size:11px;color:var(--muted);margin-top:4px}.notice{font-size:12px;padding:13px 16px;background:#fff8e9;border:1px solid #efe0ba;border-radius:8px;margin-bottom:20px;color:#806224}.notice.info{background:#edf4fd;color:#355c8d;border-color:#d8e5f6}.notice.success{background:#ebf6f2;color:#26725d;border-color:#cce6dc}.profile{display:flex;gap:15px;align-items:center}.profile .avatar{width:49px;height:49px;font-size:18px;background:#e8f0fa}.profile h2{margin-bottom:2px}.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:22px}.tab{border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);padding:11px 0;font-size:12px}.tab.active{color:var(--blue);border-color:var(--blue);font-weight:600}.scorepanel{display:grid;grid-template-columns:1fr 1fr 1fr 1.7fr;background:var(--navy);color:white;border-radius:10px;padding:24px;margin-bottom:20px;gap:18px}.scorepanel .label{color:#9fb4ce;font-size:11px}.scorepanel .big{font-size:28px;font-weight:700;margin-top:4px}.scorepanel .last{border-left:1px solid #37506d;padding-left:24px}.scorepanel .last .big{color:#e1bf7c}.kpicard{border:1px solid var(--line);border-radius:9px;margin:0 0 14px;overflow:hidden}.kpihead{background:#f8fafc;padding:15px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:15px}.kpicode{font-size:10px;color:var(--blue);font-weight:700}.kpibody{padding:16px 18px}.kpiform{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 14px}.kpiform input,.kpiform select{width:100%}.definition{font-size:12px;color:#5e7186;margin:0 0 16px}.kpiresult{font-size:12px;display:flex;align-items:center;gap:18px;border-top:1px solid var(--line);padding-top:13px}.kpiresult strong{font-size:16px;color:var(--blue)}.timeline{border-left:2px solid #e2e9f2;margin-left:7px;padding-left:21px}.event{position:relative;padding:0 0 20px;font-size:12px}.event:before{content:'';position:absolute;left:-27px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--blue);border:2px solid white}.event small{display:block;color:var(--muted);margin-top:2px}.empty{text-align:center;padding:40px;color:var(--muted);font-size:13px}.progress{display:flex;gap:8px;align-items:center}.steps{display:flex;gap:8px;flex-wrap:wrap;font-size:10px}.steps span{padding:5px 10px;border-radius:5px;background:#edf2f7;color:#8091a5}.steps span.done{background:#e5f2ec;color:#278564}.steps span.current{background:#e9f1fc;color:var(--blue);font-weight:bold}.pagination{display:flex;gap:6px;align-items:center;justify-content:flex-end;font-size:11px;margin-top:16px}.pagination button{border:1px solid var(--line);border-radius:4px;background:#fff;padding:6px 10px;color:#667b92}.pagination button.active{background:#3b82f6;border-color:#3b82f6;color:white}dialog{border:0;border-radius:12px;box-shadow:0 20px 80px #112c4b44;width:min(650px,94vw);padding:0;max-height:90vh}dialog::backdrop{background:#10253f66}dialog .dialoghead{padding:20px 25px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}dialog .dialogbody{padding:23px 25px}dialog .dialogfoot{padding:17px 25px;border-top:1px solid var(--line);display:flex;gap:9px;justify-content:flex-end}.close{border:0;background:none;font-size:22px;color:var(--muted)}#toast{position:fixed;bottom:25px;right:26px;background:var(--navy);color:white;border-radius:9px;padding:13px 20px;box-shadow:0 5px 25px #12243c33;max-width:400px;z-index:50;display:none}details{border-top:1px solid var(--line);padding:15px 0}summary{cursor:pointer;font-weight:600}.mobilebar{display:none}.footnote{font-size:11px;color:#8593a4;margin-top:22px;display:flex;justify-content:space-between;gap:20px}.reporttitle{display:none}.right{text-align:right}.iconbtn{background:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 10px}.metric-note{font-size:11px;margin-top:8px;color:var(--muted)}.rowlink{border:0;background:none;color:var(--blue);padding:0;text-align:left;font-size:12px;font-weight:600}.a11ylabel{font-size:10px;color:var(--muted)}
+@media(max-width:1100px){.shell{grid-template-columns:205px 1fr}.content{padding:25px 22px}.topbar{padding:0 22px}.stats{grid-template-columns:repeat(2,1fr)}.grid2,.grid2.equal{grid-template-columns:1fr}.kpiform{grid-template-columns:repeat(2,minmax(0,1fr))}.scorepanel{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:720px){.shell{display:block}.sidebar{display:none;height:auto;position:static}.sidebar.open{display:flex}.mobilebar{display:block}.topbar{height:auto;min-height:70px;padding:14px 16px;gap:9px;flex-wrap:wrap}.topbar-right{gap:6px;flex-wrap:wrap}.topbar .avatar,.crumb{display:none}.content{padding:22px 15px}.pagehead{flex-direction:column}h1{font-size:24px}.stats{gap:10px}.stat{padding:16px}.stat .value{font-size:25px}.card{padding:17px}.formgrid{grid-template-columns:1fr}.kpiform{grid-template-columns:1fr 1fr}.scorepanel{padding:18px}.scorepanel .last{padding-left:0;border-left:0}.barrow{grid-template-columns:110px 1fr 35px}.toolbar input{min-width:0;width:100%}.footnote{display:block}.topselect{font-size:11px;max-width:145px}.brand{padding-bottom:15px}.sidebarfoot{display:none}}
+@media print{body{background:#fff;font-size:10pt}.sidebar,.topbar,.no-print,.toolbar,.pagination,.footnote,.actions,.tabs{display:none!important}.shell{display:block}.content{padding:0;max-width:none}.card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}.scorepanel{color:#17365d;background:#f0f4fa;print-color-adjust:exact}.scorepanel .label{color:#526982}.scorepanel .last .big{color:#17365d}.pagehead{margin-bottom:15px}.reporttitle{display:block;font-size:10px;color:#687b91;margin-bottom:15px}th{print-color-adjust:exact}.kpicard{break-inside:avoid}input,select,textarea{border:0;padding:2px;background:#fff}.notice{display:none}h1{font-size:22px}button{display:none!important}table{font-size:10px}.stats{grid-template-columns:repeat(4,1fr)}.grid2{display:block}}
+
+/* v1.1.0: responsive portal, guided entry, touch navigation */
+:root{--navy:#0c284a;--blue:#165abb;--gold:#cfaa56;--ink:#18324f;--muted:#697d94;--bg:#f2f5f9;--line:#e0e7f0;--green:#087d72;--red:#b9354b;--amber:#87620d}html{scroll-behavior:smooth;scroll-padding-top:100px}body{font-family:Inter,'Segoe UI',Arial,sans-serif;line-height:1.55}.shell{grid-template-columns:236px 1fr}.sidebar{background:linear-gradient(180deg,#102f52,#0a2340);padding:27px 14px;z-index:40}.brand{gap:12px;padding:0 10px 26px}.brandmark{border-radius:11px;background:linear-gradient(140deg,#f1d99a,#c39b40);height:40px;width:40px;box-shadow:0 4px 16px #0002}.brand strong{font-size:15px;letter-spacing:.6px}.brand small{font-size:10px;letter-spacing:.2px}.navbutton{font-size:12px;font-weight:500;padding:12px 14px;border-radius:7px;min-height:46px;gap:12px}.navbutton.active{background:#ffffff13;box-shadow:inset 3px 0 #e1be72;color:#f0d79e}.navicon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center}.navicon svg,.bottomnav svg,.context-chip svg,.portal-icon svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}.sidebar .navlabel{margin-top:16px;font-size:9px}.sidebarfoot{border-top:1px solid #ffffff15;margin-top:auto;padding-top:20px}.topbar{position:sticky;top:0;z-index:30;height:74px;padding:0 32px;background:#fffffff5;backdrop-filter:blur(10px)}.topbar-right{gap:14px}.topselect{padding:8px 10px;font-size:12px;border:1px solid #e2e8f0}.crumb b{font-weight:600}.content{padding:28px 32px 40px;max-width:1536px}.pagehead{margin-bottom:24px}h1{font-size:26px;letter-spacing:-.6px}h2{font-size:17px}.eyebrow{color:#8c6b2a;letter-spacing:1.6px;font-size:9px;font-weight:700}.btn{min-height:43px;padding:10px 17px;border-radius:8px;font-size:12px;gap:8px}.btn.primary{background:var(--blue);box-shadow:0 4px 9px #165abb15}.btn.gold{background:#dbb967;color:#112d4c;border-color:#dbb967}.btn.tiny{min-height:36px;padding:7px 11px}.card,.stat{border:1px solid #e0e7ef;box-shadow:0 3px 10px #14355704;border-radius:12px}.stat{padding:22px}.stat .value{font-size:31px}.stat .sub{font-size:11px}.badge{padding:5px 9px;border-radius:5px;font-size:10px}.tablewrap td{padding:17px 13px}.tablewrap th{padding:13px}.fieldgroup label{font-size:12px;font-weight:600;color:#39536e;letter-spacing:0}.fieldgroup input,.fieldgroup select,.fieldgroup textarea{min-height:47px;border-radius:8px;font-size:14px;border-color:#d6e0eb}.fieldgroup input:focus,.fieldgroup select:focus,.fieldgroup textarea:focus{border-color:#2b6bbe;box-shadow:0 0 0 3px #165abb12;outline:0}.fieldgroup input:disabled,.fieldgroup select:disabled,.fieldgroup textarea:disabled{background:#f5f7fa;color:#6c7c90}.helper{font-size:11px;line-height:1.65}input[type=checkbox]{width:20px;height:20px;vertical-align:middle;accent-color:var(--blue);min-height:0}.toolbar{gap:12px}.toolbar input,.toolbar select{min-height:46px}.toolbar select{max-width:100%;text-overflow:ellipsis}.notice{padding:12px 15px;font-size:12px}.footnote{font-size:10px;line-height:1.6}.mobile-brand,.context-chip,.bottomnav,.drawer-close,.drawer-scrim{display:none}.portal-hero{background:linear-gradient(120deg,#10365d 0%,#0b2748 70%,#20466d 100%);border-radius:14px;color:white;padding:28px 30px;position:relative;overflow:hidden;margin-bottom:24px;display:flex;justify-content:space-between;gap:25px;align-items:center;min-height:175px}.portal-hero:before{content:'';position:absolute;right:90px;top:-115px;width:400px;height:400px;border:1px solid #ffffff0c;border-radius:50%}.portal-hero:after{content:'';position:absolute;right:-65px;top:-130px;width:400px;height:400px;border:1px solid #d5b46917;border-radius:50%}.portal-hero>*{position:relative;z-index:1}.portal-hero .eyebrow{color:#dfc48c;font-size:9px}.portal-hero h1{color:#fff;margin-bottom:9px;font-size:29px;max-width:600px}.portal-hero p{font-size:12px;color:#b9cbdd;margin:0;max-width:520px}.portal-hero .btn{flex-shrink:0}.quick-access{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:22px}.quick-tile{background:white;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;gap:14px;text-align:left;padding:18px;color:var(--ink);min-height:85px}.quick-tile:hover{border-color:#adc3e1;box-shadow:0 4px 15px #12396207}.quick-tile strong{display:block;font-size:13px}.quick-tile small{display:block;font-size:11px;color:var(--muted);margin-top:2px}.portal-icon{width:38px;height:38px;background:#edf3fb;border-radius:9px;color:var(--blue);display:grid;place-items:center;flex-shrink:0}.quick-tile:nth-child(2) .portal-icon{color:#987224;background:#fbf5e7}.profile-summary{padding:19px 22px}.profile-summary .cardhead{margin:0}.profile-summary .avatar{background:#edf3fb;border-radius:11px;width:46px;height:46px;font-size:16px}.profile-summary .profile h2{font-size:16px}.profile-summary .context-meta{font-size:12px;color:var(--muted)}.entry-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 18px}.entry-header h1{margin:0;font-size:25px}.entry-header .eyebrow{margin-bottom:4px}.save-state{display:flex;align-items:center;gap:6px;font-size:11px;color:#39796a}.save-state:before{content:'';width:6px;height:6px;background:#32957a;border-radius:50%}.entry-context{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.entry-context select{font-size:12px;min-height:40px;max-width:230px}.entry-shell{display:grid;grid-template-columns:minmax(0,1fr) 292px;gap:22px;align-items:start}.entry-main{min-width:0}.entry-side{position:sticky;top:95px}.entry-side .card{padding:20px}.entry-side h3{font-size:13px}.entry-side .progressline{margin:15px 0}.mini-score{display:flex;justify-content:space-between;align-items:center;margin:12px 0;font-size:12px}.mini-score strong{font-size:17px}.mini-score.final{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}.mini-score.final strong{font-size:28px;color:var(--blue)}.entry-main .tabs{gap:24px;margin-bottom:20px}.tab{font-size:12px;min-height:45px}.step-overview{background:white;border:1px solid var(--line);border-radius:11px;padding:18px 20px;margin-bottom:16px}.step-overview .top{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:12px}.step-overview .top strong{color:var(--ink)}.step-overview .top span{color:var(--muted);font-size:11px}.step-buttons{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.stepbtn{height:41px;border:1px solid #dbe4ef;background:#f6f8fb;border-radius:7px;color:#8190a2;display:flex;justify-content:center;align-items:center;gap:6px;font-size:12px}.stepbtn.complete{color:#287c68;background:#edf7f2;border-color:#cfe8dc}.stepbtn.active{color:white;background:var(--blue);border-color:var(--blue);box-shadow:0 3px 8px #165abb25}.stepbtn .check{font-size:10px}.step-status{font-size:11px;color:var(--muted);margin-top:11px}.entry-card{background:white;border:1px solid var(--line);border-radius:12px;overflow:hidden}.entry-card .kpihead{background:white;padding:23px 25px 16px;border-bottom:0;gap:12px}.entry-card .kpihead strong{display:block;font-size:20px;line-height:1.4;letter-spacing:-.3px;margin-top:6px}.entry-card .kpicode{color:#9a742b;font-size:10px}.entry-card .kpibody{padding:0 25px 24px}.entry-card .definition{line-height:1.7;font-size:12px;color:#687b90;margin-bottom:20px}.target-reference{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin:0 0 24px}.reference-box{border:1px solid #e4ebf3;background:#f8fafc;border-radius:8px;padding:13px 15px}.reference-box label{font-size:10px;color:var(--muted);display:block;margin-bottom:4px}.reference-box strong{font-size:16px;font-weight:600;letter-spacing:-.2px;color:#24405f}.reference-box small{font-size:11px;font-weight:400;color:var(--muted)}.entry-card .main-field label{font-size:13px;color:var(--ink)}.actual-wrap{position:relative}.actual-wrap input{font-size:24px!important;height:63px!important;font-weight:600;padding:13px 50px 13px 15px;width:100%;color:#123c70;border:1.5px solid #bacde4;background:#fcfdff;font-variant-numeric:tabular-nums}.actual-wrap .input-unit{position:absolute;right:15px;top:20px;font-size:13px;color:#7b8ea4;pointer-events:none}.number-preview{min-height:23px;font-size:11px;color:var(--blue);padding-top:6px}.entry-card .fieldgroup{margin-bottom:20px}.entry-card textarea{min-height:86px;width:100%}.entry-card select{width:100%}.entry-card .kpiresult{background:#f8fafc;margin:20px -25px -24px;padding:16px 25px;border-top:1px solid #e8edf4;justify-content:space-between;gap:12px}.entry-card .kpiresult>span{display:flex;flex-direction:column;gap:2px;font-size:10px}.entry-card .kpiresult strong{font-size:19px}.entry-card .kpiresult .metric-state{font-size:11px;display:block;max-width:48%;text-align:right}.contract-details{margin-top:15px;padding-top:15px}.contract-details summary{font-size:12px;color:#4a6480;min-height:30px}.contract-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.inline-help{background:#edf4fc;color:#476889;font-size:11px;border-radius:7px;padding:10px 12px;margin-top:9px;line-height:1.65}.field-error{color:var(--red);font-size:11px;min-height:0;margin-top:5px}.field-error:empty{display:none}.field-invalid{border-color:#c7475c!important;background:#fff9fa!important}.entry-actions{position:sticky;bottom:16px;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:14px;background:#fffffff2;backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:10px;padding:14px 17px;margin-top:16px;box-shadow:0 3px 16px #1e436510}.entry-actions .actions-right{display:flex;gap:8px}.entry-actions .btn{min-height:45px}.entry-actions .action-text{color:var(--muted);font-size:11px}.mobile-summary{display:none}.entry-note{font-size:11px;color:var(--muted);line-height:1.6;margin:14px 0}.required{color:#bd4355}.review-list{padding:0;margin:0;list-style:none}.review-item{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:16px 0;border-bottom:1px solid #e9eef5;font-size:12px}.review-item:last-child{border:0}.review-item .title{font-weight:600;margin-bottom:4px}.review-item .sub{color:var(--muted);font-size:11px}.review-item .status-icon{height:26px;width:26px;display:grid;place-items:center;background:#e7f5ee;color:#287a62;border-radius:50%;flex-shrink:0}.review-item .status-icon.pending{background:#fff3d9;color:#937020}.review-item .btn{flex-shrink:0}.behavior-choices{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}.behavior-choice{background:#f5f8fc;border:1px solid #dce5ef;border-radius:7px;min-height:44px;color:#647b93;font-size:13px}.behavior-choice.active{background:#edf4fd;color:var(--blue);border-color:var(--blue);font-weight:bold}.behavior-caption{font-size:11px;color:var(--muted);margin-top:6px}.preview-device{font-size:11px;color:var(--muted)}.entry-stage-title{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:8px}.catalog-tiles{display:none}.catalog-tile{background:white;border:1px solid #e0e7ef;border-radius:10px;padding:17px;margin-bottom:12px}.catalog-tile h3{font-size:15px;margin:9px 0}.catalog-tile .tile-meta{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:11px}.catalog-tile p{font-size:12px;color:#657b92;line-height:1.7;margin:9px 0}.catalog-tile .tile-values{display:flex;justify-content:space-between;border-top:1px solid #e6edf4;padding-top:12px;font-size:12px;margin-top:14px}.context-chip{border:1px solid #dbe5ef;background:#f8fafc;border-radius:20px;padding:7px 11px;gap:8px;align-items:center;color:var(--navy);max-width:220px;font-size:11px}.context-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.portal-help{background:none;border:0;font-size:12px;color:var(--muted);padding:8px}.skip-link{position:fixed;top:-100px;left:20px;background:var(--navy);color:white;z-index:100;padding:10px 16px}.skip-link:focus{top:10px}#toast{bottom:30px;font-size:12px;border-radius:9px;z-index:100}.history-view .timeline{margin-top:15px}dialog{border-radius:14px}dialog .dialogbody{max-height:65vh;overflow:auto}dialog .dialoghead h2{font-size:17px}.mobile-only{display:none}
+@media(min-width:1001px){.entry-page .footnote{margin-top:26px}.entry-actions{margin-bottom:10px}.entry-main .card{padding:25px}.entry-page .scorepanel{display:none}.sidebar .navbutton:last-child{margin-top:6px}.desktop-hidden{display:none!important}}
+@media(max-width:1100px) and (min-width:761px){.shell{grid-template-columns:205px 1fr}.entry-shell{grid-template-columns:1fr}.entry-side{display:none}.mobile-summary{display:block}.content{padding:24px}.topbar{padding:0 24px}.portal-hero{padding:25px}.portal-hero h1{font-size:24px}.quick-access{gap:10px}.quick-tile{padding:13px;gap:10px}.quick-tile small{display:none}}
+@media(max-width:760px){html{scroll-padding-top:84px}.shell{display:block}.sidebar{display:flex;position:fixed;height:100dvh;width:285px;max-width:88vw;top:0;left:0;transform:translateX(-105%);transition:transform .2s ease;box-shadow:none;padding-top:26px;overflow:auto;z-index:70}.sidebar.open{transform:translateX(0);box-shadow:20px 0 60px #07253b30}.sidebar .brand{padding-right:30px}.drawer-close{display:grid;position:absolute;right:15px;top:23px;place-items:center;width:32px;height:32px;border:1px solid #ffffff22;border-radius:8px;background:none;color:#c7d6e8;font-size:20px}.drawer-scrim.open{display:block;position:fixed;inset:0;background:#0a254b70;z-index:60;backdrop-filter:blur(2px)}body.drawer-open{overflow:hidden}.sidebarfoot{display:block;font-size:11px}.topbar{height:67px;min-height:67px;padding:0 16px;flex-wrap:nowrap;gap:10px;justify-content:space-between;position:sticky;top:0;z-index:35}.crumb,.topbar .avatar,.topbar .sim,.topbar-right>label{display:none}.topbar .mobilebar{display:none}.mobile-brand{display:flex;gap:9px;align-items:center;color:var(--navy)}.mobile-brand .mark{height:31px;width:31px;background:#d6b566;border-radius:8px;display:grid;place-items:center;font-size:18px;font-weight:800}.mobile-brand strong{font-size:12px;letter-spacing:.4px;display:block;line-height:1.25}.mobile-brand small{font-size:9px;color:#7b8ca0}.topbar-right{gap:0}.context-chip{display:flex;max-width:156px;min-height:40px;padding:8px 10px}.context-chip svg{width:16px;height:16px}.content{padding:20px 16px 103px;max-width:none}.pagehead{margin-bottom:18px;gap:13px}.pagehead .actions{gap:7px;width:100%}h1{font-size:23px;letter-spacing:-.4px}h2{font-size:16px}.eyebrow{font-size:8px;margin-bottom:7px}.pagehead .muted{font-size:12px}.portal-hero{padding:24px 21px;margin-bottom:19px;display:block;border-radius:12px;min-height:215px}.portal-hero h1{font-size:25px;line-height:1.25;max-width:240px;margin:8px 0 12px}.portal-hero p{font-size:11px;max-width:260px;line-height:1.7}.portal-hero .btn{margin-top:20px;font-size:12px;padding:10px 16px;min-height:43px}.portal-hero:after{right:-190px;top:-80px;width:370px;height:370px;border-color:#cfb16a20}.portal-hero:before{right:-120px;top:-80px;width:370px;height:370px}.quick-access{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:20px}.quick-tile{padding:13px 9px;flex-direction:column;align-items:flex-start;gap:11px;min-height:112px;justify-content:flex-start;border-radius:10px}.quick-tile strong{font-size:11px;line-height:1.5}.quick-tile small{display:none}.quick-tile .portal-icon{width:33px;height:33px;border-radius:8px}.stats{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}.stat{padding:17px 15px;min-height:125px;border-radius:10px}.stat .label{font-size:10px;margin-right:15px;min-height:16px}.stat .value{font-size:28px;margin-top:13px}.stat .sub{font-size:10px;line-height:1.6;margin-top:5px}.stat .accent{width:24px;height:24px;right:11px;top:13px;font-size:12px}.grid2,.grid2.equal{grid-template-columns:1fr;gap:0}.card{padding:18px;margin-bottom:17px;border-radius:11px}.cardhead{gap:10px;align-items:flex-start}.cardhead .btn{flex-shrink:0}.cardhead .muted{font-size:10px}.barrow{grid-template-columns:124px 1fr 28px;gap:10px;font-size:11px}.barrow .track{height:6px}.notice{font-size:11px;padding:11px 13px;line-height:1.7}.toolbar{display:grid;grid-template-columns:1fr;width:100%;gap:10px}.toolbar input,.toolbar select{min-width:0!important;width:100%;font-size:16px;min-height:47px}.toolbar .small{font-size:11px}.tablewrap{overflow:visible}.tablewrap table{display:block;width:100%;table-layout:auto}.tablewrap thead{display:none}.tablewrap tbody{display:block}.tablewrap tr{display:block;border:1px solid #e0e7f0;border-radius:10px;padding:15px;margin:0 0 12px;background:#fff}.tablewrap td{display:grid;grid-template-columns:102px minmax(0,1fr);align-items:start;gap:9px;border:0;padding:7px 0!important;min-width:0!important;max-width:none!important;width:auto!important;text-align:left;font-size:12px;overflow-wrap:anywhere}.tablewrap td:before{content:attr(data-label);font-size:10px;color:#8090a5;font-weight:500;line-height:1.8}.tablewrap td>div,.tablewrap td>strong,.tablewrap td>button,.tablewrap td>span{min-width:0!important;max-width:100%!important}.tablewrap td .muted{grid-column:2;font-size:10px}.tablewrap td .badge{width:max-content;max-width:100%;white-space:normal}.tablewrap td .actions{grid-column:2;gap:7px}.tablewrap td:last-child:has(button){display:flex;justify-content:flex-end;flex-wrap:wrap;padding-top:12px!important}.tablewrap td:last-child:has(button):before{display:none}.tablewrap td.empty{display:block;text-align:center}.tablewrap td.empty:before{display:none}.pagination{justify-content:space-between;gap:5px;flex-wrap:wrap;font-size:10px;margin:15px 0 3px}.pagination>span{flex-basis:100%;margin-bottom:5px}.pagination button{min-height:41px;min-width:41px;padding:8px 12px}.catalog-desktop{display:none}.catalog-tiles{display:block}.catalog-tile .btn{min-height:40px}.catalog-tile .tile-values strong{font-size:14px}.catalog-tile .kpicode{font-size:10px}.bottomnav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);z-index:45;background:#fffffffa;backdrop-filter:blur(10px);border-top:1px solid #e0e7f0;padding:7px 12px calc(8px + env(safe-area-inset-bottom));min-height:65px;box-shadow:0 -3px 12px #10315305}.bottomnav button{border:0;background:none;color:#8a9aab;display:flex;align-items:center;flex-direction:column;justify-content:center;gap:4px;min-height:44px;font-size:9px;padding:3px;border-radius:8px}.bottomnav button.active{color:var(--blue);font-weight:700}.bottomnav button.active svg{stroke-width:2}.bottomnav button .nav-dot{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--gold);bottom:1px}.bottomnav button .iconwrap{position:relative;line-height:1}.bottomnav svg{width:20px;height:20px}.footnote{font-size:9px;line-height:1.7;margin-top:20px;color:#8a9bae}.footnote span{display:block}.footnote span+span{margin-top:3px}#toast{left:16px;right:16px;bottom:84px;max-width:none;padding:12px 15px}.entry-header{margin-bottom:16px}.entry-header h1{font-size:22px}.entry-header .actions{gap:7px}.entry-header .actions .btn{min-height:39px;padding:7px 11px;font-size:11px}.entry-header .save-state{display:none}.profile-summary{padding:15px}.profile-summary .cardhead{display:block}.profile-summary .profile{gap:10px}.profile-summary .avatar{width:39px;height:39px;font-size:14px;border-radius:9px;flex-shrink:0}.profile-summary .profile h2{font-size:13px}.profile-summary .context-meta{font-size:10px;line-height:1.6;margin-top:3px}.entry-context{justify-content:space-between;flex-wrap:nowrap;margin-top:13px;padding-top:12px;border-top:1px solid #edf1f6}.entry-context select{min-height:39px;padding:7px 10px;font-size:12px;width:100%;min-width:0;max-width:100%}.entry-context .badge{flex-shrink:0}.entry-shell{display:block}.entry-side{display:none}.mobile-summary{display:block;background:white;border:1px solid var(--line);border-radius:9px;margin-bottom:16px;overflow:hidden}.mobile-summary summary{display:flex;justify-content:space-between;gap:10px;align-items:center;list-style:none;padding:12px 15px;font-size:11px;color:#6c8095;min-height:45px}.mobile-summary summary::-webkit-details-marker{display:none}.mobile-summary summary .summary-total{font-size:14px;font-weight:700;color:var(--blue)}.mobile-summary summary .chevron{font-size:13px;color:#9aabc0;margin-left:8px}.mobile-summary .scorepanel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:15px;border-radius:0;margin:0;background:#f7fafd;color:var(--ink);gap:15px}.mobile-summary .scorepanel .label{font-size:10px;color:#7e8fa3}.mobile-summary .scorepanel .big{font-size:20px}.mobile-summary .scorepanel .last{padding-left:0;border:0}.mobile-summary .scorepanel .last .big{font-size:14px;color:var(--blue)}.mobile-summary .calc-note{font-size:10px;line-height:1.6;color:var(--muted);padding:0 15px 13px;background:#f7fafd}.entry-main .tabs{gap:0;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:16px}.entry-main .tab{font-size:10px;min-height:43px;text-align:center;white-space:nowrap;padding:9px 0}.step-overview{padding:14px 15px;margin-bottom:14px;border-radius:9px}.step-overview .top{font-size:11px;margin-bottom:10px}.step-overview .top span{font-size:10px}.step-buttons{gap:6px}.stepbtn{height:37px;font-size:11px;gap:3px;border-radius:6px}.step-status{font-size:10px}.entry-card{border-radius:11px}.entry-card .kpihead{padding:19px 18px 13px}.entry-card .kpihead strong{font-size:18px;margin-top:7px}.entry-card .kpihead .badge{font-size:9px;max-width:90px;text-align:center;padding:5px 7px}.entry-card .kpibody{padding:0 18px 20px}.entry-card .definition{font-size:11px;line-height:1.75;margin-bottom:16px}.target-reference{gap:8px;margin-bottom:21px}.reference-box{padding:11px 12px}.reference-box label{font-size:9px}.reference-box strong{font-size:14px}.reference-box small{font-size:10px}.entry-card .fieldgroup{margin-bottom:20px}.entry-card .fieldgroup label{font-size:12px}.entry-card .fieldgroup input,.entry-card .fieldgroup textarea,.entry-card .fieldgroup select{font-size:16px;min-height:49px}.entry-card .actual-wrap input{height:63px!important;font-size:23px!important}.entry-card .actual-wrap .input-unit{top:20px;font-size:12px}.entry-card .helper{font-size:10px;line-height:1.75}.entry-card .kpiresult{margin:18px -18px -20px;padding:14px 18px}.entry-card .kpiresult strong{font-size:18px}.entry-card .kpiresult .metric-state{font-size:10px}.contract-grid{gap:10px}.contract-grid input{width:100%}.entry-actions{position:fixed;left:0;right:0;bottom:calc(65px + env(safe-area-inset-bottom));z-index:40;border-width:1px 0 0;border-radius:0;margin:0;padding:11px 16px;background:#fff;box-shadow:0 -4px 12px #10315308;gap:10px;min-height:71px}.entry-actions .action-text{display:none}.entry-actions .btn{min-height:46px;font-size:12px;padding:10px 15px}.entry-actions>.btn{min-width:90px}.entry-actions .actions-right{flex:1;justify-content:flex-end}.entry-actions .actions-right .btn.primary{flex:1;max-width:220px}.entry-actions .save-only{display:none}.entry-page{padding-bottom:185px}.entry-note{font-size:10px}.mobile-only{display:block}.desktop-only{display:none!important}.mobilebar{display:none}.formgrid{grid-template-columns:minmax(0,1fr)}.fieldgroup input,.fieldgroup select,.fieldgroup textarea{font-size:16px;width:100%;min-height:48px}.formgrid .fieldgroup{min-width:0}.card .fieldgroup{min-width:0}.review-item{font-size:11px;gap:10px;padding:14px 0}.review-item .btn{padding:6px 10px;font-size:10px;min-height:37px}.review-item .sub{font-size:10px}.review-item .status-icon{width:23px;height:23px}.behavior-choices{gap:7px}.behavior-choice{min-height:46px;font-size:15px}.behavior-caption{font-size:10px}.entry-main .card{padding:18px}.entry-main .card .cardhead h2{font-size:16px}.entry-page .steps{display:none}body.keyboard-open .bottomnav{display:none}body.keyboard-open .entry-actions{bottom:0;padding-bottom:calc(10px + env(safe-area-inset-bottom))}dialog{width:calc(100vw - 24px);max-height:90dvh;border-radius:13px}dialog .dialoghead{padding:18px}dialog .dialoghead h2{font-size:16px}dialog .dialogbody{padding:19px 18px;max-height:66dvh}dialog .dialogfoot{padding:13px 18px;flex-wrap:wrap}dialog .dialogfoot .btn{flex:1}.scorecard-actions .btn{width:100%}}
+@media(max-width:360px){.content{padding-left:12px;padding-right:12px}.topbar{padding:0 12px}.context-chip{max-width:138px}.stepbtn .check{display:none}.entry-card .kpihead strong{font-size:16px}.entry-card .actual-wrap input{font-size:21px!important}.reference-box strong{font-size:12px}.profile-summary .profile h2{font-size:12px}.quick-tile strong{font-size:10px}.barrow{grid-template-columns:110px 1fr 28px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+@media print{.topbar,.bottomnav,.entry-actions,.step-overview,.drawer-scrim,.sidebar,.no-print,.mobile-summary,.entry-side{display:none!important}.content,.entry-page{padding:0}.entry-shell{display:block}.entry-card,.card{break-inside:avoid;box-shadow:none}.all-print-metrics{display:block!important}.wizard-print-hidden{display:none}.portal-hero{background:#f3f6f9;color:#17365d}.portal-hero h1{color:#17365d}.tablewrap table{display:table}.tablewrap thead{display:table-header-group}.tablewrap tbody{display:table-row-group}.tablewrap tr{display:table-row}.tablewrap td{display:table-cell}.tablewrap td:before{display:none}.entry-card .fieldgroup input{border:1px solid #ccd5e0}.footnote{display:block}}
+
+</style></head><body><a href="#main" class="skip-link">Langsung ke isi</a><div class="drawer-scrim" id="drawerScrim" onclick="drawer(false)" aria-hidden="true"></div>
+<div class="shell"><aside class="sidebar" id="sidebar" aria-label="Menu utama"><button class="drawer-close" onclick="drawer(false)" aria-label="Tutup menu">×</button><div class="brand"><div class="brandmark">B</div><div><strong>BKK JATENG</strong><small>PERFORMANCE PORTAL</small></div></div><div class="navlabel">RUANG KERJA</div><nav id="nav"></nav><div class="sidebarfoot"><b>Prototipe HTML v1.1.0</b>Data tersimpan di browser ini.<br>Siapkan cadangan melalui ekspor JSON.<br><br>Rancangan lanjutan: PHP 8 dan MySQL.</div></aside>
+<div class="workspace"><header class="topbar"><div class="mobile-brand"><span class="mark">B</span><span><strong>BKK JATENG</strong><small>Performance Portal</small></span></div><div class="actions"><button class="iconbtn mobilebar" onclick="drawer(true)" aria-label="Buka menu">☰</button><div class="crumb">Manajemen SDM &nbsp;/&nbsp; <b id="crumb">Dashboard</b></div></div><div class="topbar-right"><button class="context-chip" onclick="contextDialog()" aria-label="Ganti pegawai dan peran"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg><span id="activeContextName">Pegawai</span><span aria-hidden="true">⌄</span></button><span class="sim">SIMULASI LOKAL</span><label class="a11ylabel">Peran <select id="roleSelect" class="topselect" aria-label="Peran simulasi"><option value="SDM">SDM</option><option value="ATASAN">Atasan</option><option value="PEGAWAI">Pegawai</option></select></label><label class="a11ylabel">Pegawai <select id="staffSelect" class="topselect" aria-label="Pegawai aktif"></select></label><div class="avatar" aria-hidden="true">SD</div></div></header><main class="content" id="main"></main></div></div>
+<nav class="bottomnav" id="bottomNav" aria-label="Navigasi ponsel"></nav><dialog id="modal"></dialog><div id="toast" role="status" aria-live="polite"></div><input type="file" id="importFile" accept="application/json,.json" hidden>
+<script>
+'use strict';
+const CATALOG=[
+  {
+    "name": "AO Kredit",
+    "focus": "Pertumbuhan kredit yang menghasilkan penerimaan dan tetap terjaga kualitasnya.",
+    "owner": "Kepala bidang kredit; sumber utama core banking, register prospek, dan uji dokumen.",
+    "note": "Indikator kualitas utama adalah tunggakan kohort. NPL kelolaan tetap dipantau sebagai indikator unit dan konteks coaching. Untuk AO tanpa kohort matang, tetapkan pengganti sebelum penilaian. Nilai penerimaan bunga tidak disamakan dengan pendapatan akuntansi EIR.",
+    "id": "J01",
+    "group": "Bisnis",
+    "metrics": [
+      {
+        "id": "01.01",
+        "name": "Pencairan bersih yang memenuhi syarat",
+        "type": "A",
+        "definition": "Jumlah pokok benar-benar cair, dikurangi pembatalan; top up dihitung tambahan pokok, bukan seluruh plafon pengganti.",
+        "weight": 0.25,
+        "target": 6000000000,
+        "targetNote": "Alokasi RBB per AO; contoh Rp6 miliar setahun",
+        "source": "Flow; core banking",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "01.02",
+        "name": "Pertumbuhan organik OS",
+        "type": "A",
+        "definition": "OS akhir dikurangi OS awal dengan koreksi transfer dan penghapusbukuan sesuai Bab 5.",
+        "weight": 0.15,
+        "target": 1500000000,
+        "targetNote": "Alokasi pertumbuhan; contoh Rp1,5 miliar",
+        "source": "Stock dan mutasi rekening",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "01.03",
+        "name": "Nasabah kredit baru",
+        "type": "A",
+        "definition": "Jumlah CIF unik yang pertama kali menerima pencairan kredit di bank, bukan rekening tambahan.",
+        "weight": 0.1,
+        "target": 40,
+        "targetNote": "Contoh 40 CIF setahun",
+        "source": "Flow; CIF dan tanggal cair",
+        "unit": "CIF",
+        "quality": false
+      },
+      {
+        "id": "01.04",
+        "name": "Pembayaran tagihan lancar",
+        "type": "Q",
+        "definition": "100 × pokok dan bunga jatuh tempo yang dibayar tepat waktu ÷ pokok dan bunga jatuh tempo; tanpa denda dan percepatan.",
+        "weight": 0.2,
+        "target": 98,
+        "targetNote": "Contoh ≥98%",
+        "source": "Rasio agregat; jadwal angsuran",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "01.05",
+        "name": "Tunggakan kohort umur 6 bulan",
+        "type": "L",
+        "definition": "Rasio saldo DPD ≥30 hari atas kohort pada umur 6 bulan; aturan hapus buku dan sampel mengikuti Bab 5.",
+        "weight": 0.2,
+        "target": 2,
+        "targetNote": "Contoh ≤2%; indikator internal",
+        "source": "Kohort; snapshot dan DPD",
+        "unit": "%",
+        "quality": true
+      },
+      {
+        "id": "01.06",
+        "name": "Mutu berkas dan monitoring",
+        "type": "Q",
+        "definition": "100 × rekening sampel yang berkas wajib serta monitoring jatuh temponya lengkap ÷ rekening sampel wajib diperiksa.",
+        "weight": 0.1,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Uji petik independen",
+        "unit": "%",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Petugas Remedial",
+    "focus": "Pemulihan uang dan kemampuan membayar, disertai penagihan yang tertib.",
+    "owner": "Kepala remedial; sumber core banking, ekstrakomptabel, dan register penagihan.",
+    "note": "Penurunan NPL karena hapus buku tidak dicatat sebagai recovery. Satu penerimaan tidak boleh masuk sekaligus sebagai pokok NPL dan recovery hapus buku. Daftar penugasan serta umur tunggakan menjadi dasar tingkat kesulitan target.",
+    "id": "J02",
+    "group": "Bisnis",
+    "metrics": [
+      {
+        "id": "02.01",
+        "name": "Pokok NPL tertagih tunai",
+        "type": "A",
+        "definition": "Jumlah pembayaran pokok rekening NPL dalam daftar penugasan awal; tanpa transfer, hapus buku, atau restrukturisasi tanpa kas.",
+        "weight": 0.25,
+        "target": 1800000000,
+        "targetNote": "Target per rekening dan strategi penyelesaian",
+        "source": "Flow; mutasi pokok",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "02.02",
+        "name": "Pemulihan kredit hapus buku",
+        "type": "A",
+        "definition": "Kas masuk bersih atas rekening hapus buku yang ditugaskan, setelah pengembalian atau pembatalan.",
+        "weight": 0.2,
+        "target": 600000000,
+        "targetNote": "Target daftar hapus buku",
+        "source": "Flow; ekstrakomptabel dan GL",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "02.03",
+        "name": "Bunga tunggakan tertagih",
+        "type": "A",
+        "definition": "Jumlah bunga tertunggak yang diterima tunai; denda hanya bila benar-benar diterima dan sah.",
+        "weight": 0.1,
+        "target": 450000000,
+        "targetNote": "Target bunga tertunggak",
+        "source": "Flow; penerimaan terpisah",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "02.04",
+        "name": "Kesembuhan berkelanjutan",
+        "type": "Q",
+        "definition": "100 × rekening tunggakan awal yang kembali sesuai jadwal dan bertahan tiga bulan ÷ rekening tunggakan awal yang ditugaskan.",
+        "weight": 0.2,
+        "target": 20,
+        "targetNote": "Contoh ≥20%",
+        "source": "Kohort tetap; histori pembayaran",
+        "unit": "%",
+        "quality": true
+      },
+      {
+        "id": "02.05",
+        "name": "Tindak lanjut komitmen",
+        "type": "Q",
+        "definition": "100 × komitmen jatuh tempo yang ditindaklanjuti sesuai rencana dan dibuktikan ÷ seluruh komitmen jatuh tempo.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register kunjungan dan komitmen",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "02.06",
+        "name": "Kepatuhan cara menagih",
+        "type": "Z",
+        "definition": "Seluruh tindakan mematuhi wewenang, prosedur komunikasi, dan penanganan uang; dinilai dari pemeriksaan terverifikasi.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Tidak ada pelanggaran terbukti",
+        "source": "Register keluhan dan uji kepatuhan",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "AO Dana",
+    "focus": "Dana yang bertahan dan dihimpun dengan biaya serta praktik pemasaran yang wajar.",
+    "owner": "Kepala pemasaran dana; sumber core banking, GL bunga, dan register akuisisi.",
+    "note": "Kenaikan pada hari terakhir bulan tidak cukup sebagai hasil. Retensi tidak mensyaratkan nasabah membeli produk yang tidak dibutuhkan. Kontrol suku bunga tidak dinilai hanya dari biaya yang diputuskan pejabat di luar kewenangan AO.",
+    "id": "J03",
+    "group": "Bisnis",
+    "metrics": [
+      {
+        "id": "03.01",
+        "name": "Pertumbuhan saldo harian organik",
+        "type": "A",
+        "definition": "Rata-rata saldo harian periode dikurangi baseline periode sebanding, setelah koreksi perpindahan penugasan.",
+        "weight": 0.25,
+        "target": 3000000000,
+        "targetNote": "Alokasi pertumbuhan DPK",
+        "source": "Rata-rata saldo harian",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "03.02",
+        "name": "Pertumbuhan tabungan organik",
+        "type": "A",
+        "definition": "Kenaikan rata-rata saldo harian tabungan setelah koreksi transfer pemilik; digunakan sebagai penyeimbang komposisi.",
+        "weight": 0.15,
+        "target": 1500000000,
+        "targetNote": "Target dana murah sesuai strategi",
+        "source": "Rata-rata saldo harian produk",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "03.03",
+        "name": "Nasabah dana baru aktif",
+        "type": "A",
+        "definition": "CIF baru bank yang saldo dan aktivitasnya memenuhi definisi aktif pada hari ke-90; satu CIF dihitung satu kali.",
+        "weight": 0.15,
+        "target": 60,
+        "targetNote": "Contoh 60 CIF setahun",
+        "source": "Kohort akuisisi dan transaksi",
+        "unit": "CIF",
+        "quality": false
+      },
+      {
+        "id": "03.04",
+        "name": "Retensi dana jatuh tempo",
+        "type": "Q",
+        "definition": "100 × pokok deposito jatuh tempo yang tetap berada di bank setelah 30 hari ÷ seluruh pokok deposito jatuh tempo kelolaan.",
+        "weight": 0.2,
+        "target": 85,
+        "targetNote": "Contoh ≥85%",
+        "source": "Kohort jatuh tempo",
+        "unit": "%",
+        "quality": true
+      },
+      {
+        "id": "03.05",
+        "name": "Biaya dana kelolaan",
+        "type": "L",
+        "definition": "100 × beban bunga kelolaan ÷ rata-rata saldo harian × 365 ÷ jumlah hari periode; konsisten termasuk biaya promosi terkait.",
+        "weight": 0.15,
+        "target": 5,
+        "targetNote": "Batas internal sesuai produk; contoh 5% setahun",
+        "source": "GL dan saldo harian",
+        "unit": "%",
+        "quality": true
+      },
+      {
+        "id": "03.06",
+        "name": "Kelengkapan dan kewajaran akuisisi",
+        "type": "Z",
+        "definition": "CDD, persetujuan produk, pemberian informasi, serta suku bunga sesuai kewenangan terlaksana pada seluruh objek wajib.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Tidak ada pelanggaran terbukti",
+        "source": "Register akuisisi dan uji dokumen",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Pimpinan Cabang",
+    "focus": "Kinerja cabang yang seimbang antara laba, pertumbuhan, kualitas aset, dan pengendalian.",
+    "owner": "Pimpinan wilayah atau atasan sesuai struktur; verifikasi MIS, Keuangan, Risiko, dan Kepatuhan.",
+    "note": "Jika target laba nol atau negatif, ganti rumus A dengan target pengurangan kerugian dalam rupiah yang positif dan baseline disepakati. NPL adalah indikator kualitas utama. Kepala wilayah dapat memakai pola ini pada agregat wilayah; target tidak dijumlahkan ulang tanpa eliminasi transfer.",
+    "id": "J04",
+    "group": "Bisnis",
+    "metrics": [
+      {
+        "id": "04.01",
+        "name": "Laba operasional terkoreksi",
+        "type": "A",
+        "definition": "Laba unit sesuai kebijakan alokasi biaya, CKPN, dan EIR; koreksi pos nonberulang hanya dengan persetujuan Keuangan.",
+        "weight": 0.25,
+        "target": 1000000000,
+        "targetNote": "RBB laba positif",
+        "source": "GL cabang dan rekonsiliasi",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "04.02",
+        "name": "Pertumbuhan organik kredit",
+        "type": "A",
+        "definition": "Pertumbuhan OS cabang dengan koreksi transfer, hapus buku, dan penyesuaian nonbisnis.",
+        "weight": 0.15,
+        "target": 4000000000,
+        "targetNote": "Alokasi RBB kredit",
+        "source": "Stock dan mutasi kredit",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "04.03",
+        "name": "Pertumbuhan DPK rata-rata",
+        "type": "A",
+        "definition": "Selisih rata-rata saldo harian DPK terhadap baseline sebanding, setelah koreksi transfer unit.",
+        "weight": 0.15,
+        "target": 5000000000,
+        "targetNote": "Alokasi RBB dana",
+        "source": "Saldo harian core banking",
+        "unit": "Rp",
+        "quality": false
+      },
+      {
+        "id": "04.04",
+        "name": "NPL bruto cabang",
+        "type": "L",
+        "definition": "100 × OS kolektibilitas 3–5 ÷ seluruh OS kredit pada tanggal yang sama; klasifikasi mengikuti ketentuan yang berlaku.",
+        "weight": 0.2,
+        "target": 3,
+        "targetNote": "Batas internal sesuai RBB dan profil risiko",
+        "source": "Stock akhir bulan",
+        "unit": "%",
+        "quality": true
+      },
+      {
+        "id": "04.05",
+        "name": "Efektivitas kontrol cabang",
+        "type": "Q",
+        "definition": "100 × kontrol kunci jatuh tempo yang lulus uji pelaksanaan ÷ seluruh kontrol kunci jatuh tempo.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Uji kas, otorisasi, dan pelaporan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "04.06",
+        "name": "Penyelesaian tindakan perbaikan",
+        "type": "Q",
+        "definition": "100 × tindakan jatuh tempo yang ditutup dan diverifikasi tepat waktu ÷ seluruh tindakan jatuh tempo.",
+        "weight": 0.1,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register audit dan rencana kerja",
+        "unit": "%",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Analis Kredit",
+    "focus": "Analisis yang tepat waktu, dapat dipertanggungjawabkan, dan independen dari target persetujuan.",
+    "owner": "Kepala analisis kredit; uji mutu oleh reviewer kredit yang tidak menangani berkas yang sama.",
+    "note": "Jumlah kredit disetujui bukan KPI analis. Penolakan yang beralasan tidak menurunkan nilai. Kualitas kredit kohort dapat menjadi pemantauan bersama, tetapi tidak otomatis dibebankan kepada analis bila penyebabnya berada di luar analisis awal.",
+    "id": "J05",
+    "group": "Operasional",
+    "metrics": [
+      {
+        "id": "05.01",
+        "name": "Analisis selesai sesuai SLA",
+        "type": "Q",
+        "definition": "Persentase analisis jatuh tempo yang terbit tepat waktu; waktu mulai saat berkas minimum dinyatakan lengkap.",
+        "weight": 0.2,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Register analisis bertimestamp",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "05.02",
+        "name": "Analisis diterima tanpa revisi material",
+        "type": "Q",
+        "definition": "100 × memo tanpa koreksi material pada review pertama ÷ seluruh memo direview.",
+        "weight": 0.25,
+        "target": 98,
+        "targetNote": "Contoh ≥98%",
+        "source": "Memo dan catatan reviewer",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "05.03",
+        "name": "Validitas data analisis",
+        "type": "Q",
+        "definition": "100 × berkas yang data usaha, arus kas, dan kewajibannya terverifikasi ÷ berkas sampel.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Uji bukti dan perhitungan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "05.04",
+        "name": "Ketepatan penilaian risiko",
+        "type": "Q",
+        "definition": "100 × memo yang rating, asumsi, dan mitigasinya sesuai metodologi ÷ memo sampel.",
+        "weight": 0.15,
+        "target": 98,
+        "targetNote": "Contoh ≥98%",
+        "source": "Review metodologi kredit",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "05.05",
+        "name": "Kejelasan rekomendasi",
+        "type": "Q",
+        "definition": "100 × memo memenuhi rubrik kemampuan bayar, risiko, mitigasi, dan syarat pencairan ÷ memo sampel.",
+        "weight": 0.1,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Rubrik pemeriksaan memo",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "05.06",
+        "name": "Independensi dan kewenangan",
+        "type": "Z",
+        "definition": "Tidak ada manipulasi analisis, pengabaian konflik kepentingan, atau pelampauan kewenangan yang terbukti.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Tidak ada pelanggaran terbukti",
+        "source": "Log persetujuan dan pemeriksaan",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Staf Administrasi Kredit",
+    "focus": "Pencairan dan dokumen kredit yang akurat, aman, dan dapat ditelusuri.",
+    "owner": "Kepala administrasi atau operasional; sumber register pencairan dan arsip agunan.",
+    "note": "Keterlambatan pihak luar dicatat dan dieskalasi. Pengecualian SLA harus memiliki alasan, bukti, serta persetujuan; tidak menghapus tanggung jawab monitoring. Petugas tidak memegang fungsi input dan otorisasi transaksi yang sama.",
+    "id": "J06",
+    "group": "Operasional",
+    "metrics": [
+      {
+        "id": "06.01",
+        "name": "Pemenuhan syarat sebelum cair",
+        "type": "Z",
+        "definition": "Tidak ada pencairan tanpa syarat wajib dan otorisasi yang sah pada lingkup tanggung jawab petugas.",
+        "weight": 0.25,
+        "target": 0,
+        "targetNote": "Semua kontrol wajib dipenuhi",
+        "source": "Checklist dan log pencairan",
+        "unit": "Kejadian",
+        "quality": false
+      },
+      {
+        "id": "06.02",
+        "name": "Akurasi input kredit",
+        "type": "Q",
+        "definition": "100 × rekening tanpa kesalahan field wajib saat review pertama ÷ rekening yang diproses.",
+        "weight": 0.2,
+        "target": 99.5,
+        "targetNote": "Contoh ≥99,5%",
+        "source": "Input dan hasil checker",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "06.03",
+        "name": "Proses pencairan sesuai SLA",
+        "type": "Q",
+        "definition": "Persentase berkas jatuh tempo yang diproses tepat waktu setelah persyaratan lengkap dan keputusan sah diterima.",
+        "weight": 0.15,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Register waktu pencairan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "06.04",
+        "name": "Pengikatan dan dokumen susulan",
+        "type": "Q",
+        "definition": "100 × dokumen jatuh tempo yang lengkap dan diverifikasi tepat waktu ÷ dokumen jatuh tempo.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register notaris dan pengikatan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "06.05",
+        "name": "Kesesuaian arsip agunan",
+        "type": "Q",
+        "definition": "100 × dokumen agunan yang fisik, identitas, dan lokasinya sesuai register ÷ dokumen diperiksa.",
+        "weight": 0.1,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Stock opname dokumen",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "06.06",
+        "name": "Data kredit dan SLIK valid",
+        "type": "Q",
+        "definition": "100 × record kelolaan lolos validasi sebelum pelaporan ÷ record kelolaan wajib dilaporkan.",
+        "weight": 0.1,
+        "target": 99.5,
+        "targetNote": "Contoh ≥99,5%",
+        "source": "Validasi data dan error log",
+        "unit": "%",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Teller",
+    "focus": "Transaksi yang akurat, pelayanan yang wajar, dan pengamanan kas.",
+    "owner": "Kepala operasional; sumber log transaksi, kas harian, dan hasil checker.",
+    "note": "Selisih kas dicatat sebagai kejadian dengan nominal, sebab, pelaporan, dan penyelesaian; jangan mendorong pegawai menutup selisih sendiri agar register tampak bersih. Volume transaksi dipakai untuk kapasitas kerja, bukan target yang mendorong melewati pemeriksaan.",
+    "id": "J07",
+    "group": "Operasional",
+    "metrics": [
+      {
+        "id": "07.01",
+        "name": "Akurasi transaksi",
+        "type": "Q",
+        "definition": "100 × transaksi tanpa koreksi akibat kesalahan teller ÷ seluruh transaksi; koreksi sistem atau nasabah dipisahkan.",
+        "weight": 0.25,
+        "target": 99.8,
+        "targetNote": "Contoh ≥99,8%",
+        "source": "Log reversal dan penyebab",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "07.02",
+        "name": "Kepatuhan rekonsiliasi kas",
+        "type": "Z",
+        "definition": "Perhitungan fisik, pencocokan saldo, pelaporan selisih, dan tindak lanjut dilaksanakan setiap hari sesuai SOP.",
+        "weight": 0.2,
+        "target": 0,
+        "targetNote": "Seluruh kontrol harian terpenuhi",
+        "source": "Kas harian dan berita acara",
+        "unit": "Kejadian",
+        "quality": false
+      },
+      {
+        "id": "07.03",
+        "name": "Layanan sesuai standar durasi",
+        "type": "Q",
+        "definition": "100 × transaksi selesai dalam standar menit jenis transaksinya ÷ transaksi selesai dalam periode.",
+        "weight": 0.15,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Timestamp awal dan akhir",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "07.04",
+        "name": "Ketepatan administrasi tutup kas",
+        "type": "Q",
+        "definition": "100 × hari dokumen tutup kas lengkap tepat waktu ÷ hari teller bertugas.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register tutup kas",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "07.05",
+        "name": "Kepatuhan otorisasi dan identifikasi",
+        "type": "Z",
+        "definition": "Pemeriksaan identitas, limit, dan otorisasi wajib dipenuhi; pelanggaran dinilai setelah sebab dan tanggung jawab terbukti.",
+        "weight": 0.15,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Log otorisasi dan uji transaksi",
+        "unit": "Kejadian",
+        "quality": false
+      },
+      {
+        "id": "07.06",
+        "name": "Mutu layanan teramati",
+        "type": "Q",
+        "definition": "Skor survei atau mystery shopping 0–100 dari sampel independen dengan instrumen tetap.",
+        "weight": 0.1,
+        "target": 85,
+        "targetNote": "Contoh ≥85",
+        "source": "Survei terverifikasi",
+        "unit": "%",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Customer Service",
+    "focus": "Layanan selesai dengan data nasabah yang benar dan informasi produk yang jelas.",
+    "owner": "Kepala layanan atau operasional; sumber register layanan, CIF, dan pengaduan.",
+    "note": "CS tidak dibebani keputusan penyelesaian pengaduan yang memerlukan otorisasi unit lain. KPI mengukur penerimaan, pencatatan, eskalasi, dan komunikasi yang menjadi tugasnya. Pembukaan rekening semata tidak dijadikan KPI inti karena bergantung pada arus nasabah.",
+    "id": "J08",
+    "group": "Operasional",
+    "metrics": [
+      {
+        "id": "08.01",
+        "name": "Permintaan layanan sesuai SLA",
+        "type": "Q",
+        "definition": "Persentase permintaan jatuh tempo yang diselesaikan tepat waktu; dibedakan per jenis layanan.",
+        "weight": 0.2,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Register permintaan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "08.02",
+        "name": "Akurasi dan kelengkapan CIF",
+        "type": "Q",
+        "definition": "100 × CIF tanpa kesalahan field wajib pada uji pertama ÷ CIF diperiksa.",
+        "weight": 0.25,
+        "target": 99,
+        "targetNote": "Contoh ≥99%",
+        "source": "Uji data CIF",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "08.03",
+        "name": "CDD dan informasi produk",
+        "type": "Z",
+        "definition": "Kontrol identifikasi, screening, persetujuan, dan penjelasan produk yang menjadi tugas CS seluruhnya dipenuhi.",
+        "weight": 0.2,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Checklist dan uji rekaman",
+        "unit": "Kejadian",
+        "quality": false
+      },
+      {
+        "id": "08.04",
+        "name": "Penanganan pengaduan sesuai tugas",
+        "type": "Q",
+        "definition": "100 × tahapan pengaduan jatuh tempo milik CS yang selesai tepat waktu ÷ seluruh tahapan jatuh tempo milik CS.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register pengaduan dan eskalasi",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "08.05",
+        "name": "Penyelesaian pada kontak pertama",
+        "type": "Q",
+        "definition": "100 × permintaan yang layak diselesaikan langsung dan tidak dibuka ulang dalam 7 hari ÷ permintaan yang layak.",
+        "weight": 0.1,
+        "target": 85,
+        "targetNote": "Contoh ≥85%",
+        "source": "Register kontak dan reopen",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "08.06",
+        "name": "Kepuasan layanan",
+        "type": "Q",
+        "definition": "Skor survei 0–100 dengan sampel dan metode tetap, dikelola pihak selain CS yang dinilai.",
+        "weight": 0.1,
+        "target": 85,
+        "targetNote": "Contoh ≥85",
+        "source": "Survei independen",
+        "unit": "%",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Kepala Operasional Cabang",
+    "focus": "Kualitas proses cabang dan efektivitas pengendalian lintas petugas.",
+    "owner": "Pimpinan cabang; verifikasi fungsi operasional pusat dan kontrol independen.",
+    "note": "Kepala operasional bertanggung jawab atas hasil unit dan supervisi; kesalahan staf tidak otomatis menjadi pelanggaran pribadi kepala. Ukur apakah kontrol pencegahan, deteksi, dan eskalasi telah dijalankan.",
+    "id": "J09",
+    "group": "Operasional",
+    "metrics": [
+      {
+        "id": "09.01",
+        "name": "Kontrol kas dan otorisasi",
+        "type": "Z",
+        "definition": "Dual control, cash count, limit, dan pemisahan fungsi terlaksana pada seluruh titik kontrol wajib.",
+        "weight": 0.25,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Checklist dan log otorisasi",
+        "unit": "Kejadian",
+        "quality": false
+      },
+      {
+        "id": "09.02",
+        "name": "Akurasi transaksi unit",
+        "type": "Q",
+        "definition": "100 × transaksi tanpa error yang berasal dari unit ÷ transaksi unit; klasifikasi penyebab diverifikasi.",
+        "weight": 0.2,
+        "target": 99.8,
+        "targetNote": "Contoh ≥99,8%",
+        "source": "Error log operasional",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "09.03",
+        "name": "SLA layanan unit",
+        "type": "Q",
+        "definition": "Persentase pekerjaan layanan unit yang jatuh tempo dan selesai tepat waktu.",
+        "weight": 0.15,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Register layanan unit",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "09.04",
+        "name": "Rekonsiliasi dan tutup hari",
+        "type": "Q",
+        "definition": "100 × kewajiban harian selesai lengkap tepat waktu ÷ seluruh kewajiban harian.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "GL dan checklist harian",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "09.05",
+        "name": "Perbaikan temuan operasional",
+        "type": "Q",
+        "definition": "100 × tindakan jatuh tempo yang ditutup dengan bukti tervalidasi ÷ tindakan jatuh tempo.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register tindak lanjut",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "09.06",
+        "name": "Uji kesiapan petugas",
+        "type": "Q",
+        "definition": "100 × petugas sasaran lulus uji SOP dan simulasi tugas kritikal ÷ petugas sasaran.",
+        "weight": 0.1,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Hasil uji dan tindak lanjut",
+        "unit": "%",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Staf Akuntansi dan Pelaporan",
+    "focus": "Angka yang benar, rekonsiliasi tuntas, serta laporan yang diterima tepat waktu.",
+    "owner": "Kepala akuntansi atau keuangan; reviewer berbeda dari penyusun.",
+    "note": "Koreksi karena perubahan ketentuan atau data sumber yang baru tersedia dibedakan dari kesalahan penyusun. Sanksi pajak tidak dibebankan otomatis kepada staf akuntansi yang tidak ditugaskan mengelola pajak.",
+    "id": "J10",
+    "group": "Pendukung dan Kontrol",
+    "metrics": [
+      {
+        "id": "10.01",
+        "name": "Laporan tepat waktu dan diterima",
+        "type": "Q",
+        "definition": "100 × laporan jatuh tempo yang disampaikan lengkap dan diterima sesuai tenggat ÷ laporan wajib jatuh tempo.",
+        "weight": 0.25,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Bukti penerimaan sistem",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "10.02",
+        "name": "Laporan benar pada penyampaian awal",
+        "type": "Q",
+        "definition": "100 × laporan tanpa koreksi material akibat penyusun ÷ laporan disampaikan.",
+        "weight": 0.2,
+        "target": 99,
+        "targetNote": "Contoh ≥99%",
+        "source": "Versi laporan dan koreksi",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "10.03",
+        "name": "Rekonsiliasi lengkap tepat waktu",
+        "type": "Q",
+        "definition": "100 × akun wajib yang direkonsiliasi dan direview sesuai tenggat ÷ akun wajib direkonsiliasi.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%; contoh tenggat H+5 kerja",
+        "source": "Kertas kerja dan sign off",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "10.04",
+        "name": "Penyelesaian selisih rekonsiliasi",
+        "type": "Q",
+        "definition": "100 × item selisih jatuh tempo yang diselesaikan sah ÷ seluruh item selisih jatuh tempo.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register selisih dan jurnal",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "10.05",
+        "name": "Validitas jurnal dan perhitungan",
+        "type": "Q",
+        "definition": "100 × jurnal atau perhitungan sampel dengan akun, periode, nominal, dan bukti benar ÷ objek sampel.",
+        "weight": 0.1,
+        "target": 99.5,
+        "targetNote": "Contoh ≥99,5%",
+        "source": "Uji jurnal termasuk EIR atau CKPN sesuai tugas",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "10.06",
+        "name": "Kontrol perubahan dan otorisasi",
+        "type": "Z",
+        "definition": "Tidak ada jurnal tanpa otorisasi, perubahan periode tanpa izin, atau bukti yang direkayasa.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Audit trail dan persetujuan",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Staf Teknologi Informasi",
+    "focus": "Layanan yang tersedia, insiden tertangani, dan kontrol teknis yang dapat dibuktikan.",
+    "owner": "Kepala TI; tugas dipisahkan antara operasi, keamanan, pengembangan, dan vendor.",
+    "note": "Availability sistem bersama adalah KPI tim dan hanya digunakan untuk staf yang memang mempunyai tanggung jawab layanan tersebut. Untuk pengembang, ganti availability dengan mutu rilis; untuk staf keamanan, gunakan efektivitas deteksi. Gangguan vendor tetap masuk laporan layanan, tetapi atribusi individu ditelaah.",
+    "id": "J11",
+    "group": "Pendukung dan Kontrol",
+    "metrics": [
+      {
+        "id": "11.01",
+        "name": "Ketersediaan layanan kelolaan",
+        "type": "Q",
+        "definition": "100 × menit layanan tersedia ÷ menit layanan dijadwalkan; maintenance yang dikecualikan harus disetujui sebelumnya.",
+        "weight": 0.2,
+        "target": 99.5,
+        "targetNote": "Contoh ≥99,5%",
+        "source": "Monitoring dan kalender layanan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "11.02",
+        "name": "Respons dan pemulihan insiden",
+        "type": "Q",
+        "definition": "Persentase kewajiban respons atau pemulihan jatuh tempo sesuai SLA prioritas; objek dan penanggung jawab ditentukan.",
+        "weight": 0.2,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Helpdesk bertimestamp",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "11.03",
+        "name": "Backup yang dapat dipulihkan",
+        "type": "Q",
+        "definition": "100 × set backup wajib yang selesai dan lulus verifikasi pemulihan sesuai jadwal ÷ set backup wajib.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Log backup dan uji restore",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "11.04",
+        "name": "Perbaikan kerentanan",
+        "type": "Q",
+        "definition": "100 × kerentanan jatuh tempo yang dimitigasi dan diverifikasi tepat waktu ÷ kerentanan jatuh tempo kelolaan.",
+        "weight": 0.15,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Scanner dan bukti retest",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "11.05",
+        "name": "Perubahan atau proyek diterima",
+        "type": "Q",
+        "definition": "100 × milestone jatuh tempo yang diterima pengguna dan lolos uji mutu tepat waktu ÷ milestone jatuh tempo.",
+        "weight": 0.15,
+        "target": 90,
+        "targetNote": "Contoh ≥90%",
+        "source": "UAT dan change log",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "11.06",
+        "name": "Kontrol akses istimewa",
+        "type": "Z",
+        "definition": "Persetujuan, pencabutan akses, logging, dan review akses istimewa dilaksanakan sesuai tugas dan jadwal.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "IAM dan log administrator",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Staf SDM",
+    "focus": "Administrasi pegawai yang benar dan layanan SDM yang selesai dengan mutu yang disepakati.",
+    "owner": "Kepala SDM; data SIMPEG, payroll, LMS, dan register permintaan.",
+    "note": "Enam KPI ini berlaku untuk staf generalis. Petugas rekrutmen mengganti payroll dengan pemenuhan lowongan sesuai SLA dan mutu masa percobaan, setelah mendefinisikan waktu tunggu persetujuan. Turnover seluruh bank adalah indikator bersama, bukan kesalahan otomatis staf SDM.",
+    "id": "J12",
+    "group": "Pendukung dan Kontrol",
+    "metrics": [
+      {
+        "id": "12.01",
+        "name": "Akurasi payroll",
+        "type": "Q",
+        "definition": "100 × record pegawai yang dibayar benar pada jadwal pertama ÷ record pembayaran wajib; hanya bagi petugas payroll.",
+        "weight": 0.25,
+        "target": 99.8,
+        "targetNote": "Contoh ≥99,8%",
+        "source": "Payroll dan hasil rekonsiliasi",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "12.02",
+        "name": "Layanan administrasi sesuai SLA",
+        "type": "Q",
+        "definition": "Persentase permintaan jatuh tempo yang diselesaikan lengkap tepat waktu.",
+        "weight": 0.2,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Register layanan SDM",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "12.03",
+        "name": "Akurasi data kepegawaian",
+        "type": "Q",
+        "definition": "100 × record pegawai dengan field wajib benar dan bukti sah ÷ record sampel.",
+        "weight": 0.15,
+        "target": 99,
+        "targetNote": "Contoh ≥99%",
+        "source": "SIMPEG dan uji dokumen",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "12.04",
+        "name": "Pemenuhan kebutuhan kompetensi",
+        "type": "Q",
+        "definition": "100 × pegawai sasaran yang lulus asesmen kompetensi setelah program ÷ pegawai sasaran jatuh tempo.",
+        "weight": 0.15,
+        "target": 90,
+        "targetNote": "Contoh ≥90%",
+        "source": "LMS dan hasil asesmen",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "12.05",
+        "name": "Siklus penilaian selesai valid",
+        "type": "Q",
+        "definition": "100 × scorecard jatuh tempo lengkap, direview, dan disahkan tepat waktu ÷ scorecard jatuh tempo kelolaan.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Sistem KPI dan persetujuan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "12.06",
+        "name": "Kontrol data dan kewajiban SDM",
+        "type": "Z",
+        "definition": "Akses data pribadi, perubahan payroll, dan kewajiban administratif dalam penugasan dijalankan sesuai otorisasi.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Audit trail dan checklist",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Staf Kepatuhan dan APU PPT",
+    "focus": "Kajian, monitoring, pelaporan, dan eskalasi yang tepat serta independen.",
+    "owner": "Pejabat fungsi kepatuhan; reviewer menjaga kerahasiaan data dan laporan.",
+    "note": "Jumlah laporan transaksi mencurigakan tidak diberi target minimum atau maksimum. Sanksi unit bisnis dan banyaknya temuan bukan ukuran kegagalan petugas kepatuhan. Pengkinian CIF dinilai pada pemilik proses; kepatuhan dinilai atas pemantauan dan eskalasinya.",
+    "id": "J13",
+    "group": "Pendukung dan Kontrol",
+    "metrics": [
+      {
+        "id": "13.01",
+        "name": "Pelaporan kewajiban tepat waktu",
+        "type": "Q",
+        "definition": "Persentase laporan jatuh tempo dalam penugasan yang disampaikan lengkap dan diterima tepat waktu.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Bukti penerimaan pelaporan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "13.02",
+        "name": "Analisis alert sesuai SLA",
+        "type": "Q",
+        "definition": "Persentase alert jatuh tempo yang selesai dianalisis dan direview sesuai tenggat.",
+        "weight": 0.2,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Case management dan reviewer",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "13.03",
+        "name": "Mutu analisis alert dan kajian",
+        "type": "Q",
+        "definition": "100 × analisis sampel yang memenuhi rubrik fakta, risiko, dasar, dan rekomendasi ÷ analisis sampel.",
+        "weight": 0.2,
+        "target": 98,
+        "targetNote": "Contoh ≥98%",
+        "source": "Uji mutu independen",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "13.04",
+        "name": "Realisasi pengujian kepatuhan",
+        "type": "Q",
+        "definition": "100 × pengujian berbasis risiko jatuh tempo yang selesai dengan bukti ÷ pengujian jatuh tempo.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Rencana kerja dan kertas kerja",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "13.05",
+        "name": "Eskalasi kewajiban dan pelanggaran",
+        "type": "Q",
+        "definition": "100 × isu yang wajib dieskalasi dan telah dieskalasi tepat waktu ÷ isu wajib eskalasi.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register isu dan komunikasi",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "13.06",
+        "name": "Independensi dan kerahasiaan",
+        "type": "Z",
+        "definition": "Tidak ada penghilangan isu, perubahan simpulan tanpa dasar, atau pengungkapan informasi terlarang yang terbukti.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Review akses dan pemeriksaan",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Staf Manajemen Risiko",
+    "focus": "Analisis risiko yang valid dan peringatan yang sampai kepada pengambil keputusan.",
+    "owner": "Pejabat fungsi risiko; sumber database risiko, EWS, dan laporan limit.",
+    "note": "Kerugian kredit seluruh bank tidak dibebankan langsung kepada staf risiko. Penilaian berfokus pada validitas analisis, kejelasan rekomendasi, dan kecepatan eskalasi yang menjadi mandatnya.",
+    "id": "J14",
+    "group": "Pendukung dan Kontrol",
+    "metrics": [
+      {
+        "id": "14.01",
+        "name": "Pelaporan risiko tepat waktu",
+        "type": "Q",
+        "definition": "Persentase laporan jatuh tempo yang lengkap, direview, dan disampaikan tepat waktu.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register laporan risiko",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "14.02",
+        "name": "Akurasi pengukuran risiko",
+        "type": "Q",
+        "definition": "100 × perhitungan sampel yang data, formula, dan asumsinya valid ÷ perhitungan sampel.",
+        "weight": 0.25,
+        "target": 99,
+        "targetNote": "Contoh ≥99%",
+        "source": "Rekonsiliasi dan uji model",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "14.03",
+        "name": "Eskalasi pelampauan limit",
+        "type": "Q",
+        "definition": "100 × pelampauan wajib yang dieskalasi sesuai tenggat ÷ pelampauan wajib eskalasi.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Log limit dan bukti eskalasi",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "14.04",
+        "name": "Kajian risiko sesuai SLA",
+        "type": "Q",
+        "definition": "Persentase kajian jatuh tempo yang selesai dengan rekomendasi yang dapat ditindaklanjuti.",
+        "weight": 0.15,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Register kajian dan review",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "14.05",
+        "name": "Validasi RCSA dan data kerugian",
+        "type": "Q",
+        "definition": "100 × data unit jatuh tempo yang divalidasi atau dieskalasi bila belum lengkap ÷ data unit jatuh tempo.",
+        "weight": 0.1,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "RCSA dan loss event database",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "14.06",
+        "name": "Independensi parameter risiko",
+        "type": "Z",
+        "definition": "Tidak ada pengubahan parameter, penghilangan kejadian, atau intervensi simpulan tanpa dasar dan otorisasi.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Versi model dan audit trail",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Auditor Internal",
+    "focus": "Pemeriksaan berbasis risiko dan simpulan yang didukung bukti memadai.",
+    "owner": "Kepala SKAI; penilaian independen sesuai tata kelola fungsi audit.",
+    "note": "Jumlah temuan tidak menjadi target. Temuan eksternal yang tidak terdeteksi dibahas melalui review cakupan dan mutu audit, bukan otomatis dianggap kelalaian. Penutupan tindakan auditee bukan tanggung jawab hasil auditor.",
+    "id": "J15",
+    "group": "Pendukung dan Kontrol",
+    "metrics": [
+      {
+        "id": "15.01",
+        "name": "Realisasi penugasan berbasis risiko",
+        "type": "Q",
+        "definition": "100 × bobot penugasan jatuh tempo selesai ÷ bobot penugasan jatuh tempo dalam PKAT yang disetujui.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "PKAT dan surat penugasan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "15.02",
+        "name": "Mutu kertas kerja audit",
+        "type": "Q",
+        "definition": "100 × penugasan sampel yang lulus review bukti, cakupan, dan simpulan ÷ penugasan sampel.",
+        "weight": 0.25,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Quality review audit",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "15.03",
+        "name": "Ketepatan laporan hasil audit",
+        "type": "Q",
+        "definition": "Persentase laporan jatuh tempo yang diterbitkan setelah review sesuai SLA yang ditetapkan.",
+        "weight": 0.15,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Register LHA dan review",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "15.04",
+        "name": "Verifikasi tindak lanjut",
+        "type": "Q",
+        "definition": "100 × bukti tindak lanjut jatuh tempo yang diverifikasi sesuai SLA ÷ bukti tindak lanjut jatuh tempo.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Register tindak lanjut dan bukti",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "15.05",
+        "name": "Eskalasi temuan signifikan",
+        "type": "Q",
+        "definition": "100 × isu signifikan yang dieskalasi tepat waktu ÷ isu signifikan wajib eskalasi.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Laporan dan bukti komunikasi",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "15.06",
+        "name": "Independensi pemeriksaan",
+        "type": "Z",
+        "definition": "Tidak ada benturan kepentingan yang disembunyikan, bukti direkayasa, atau temuan dihapus tanpa dasar.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Pernyataan independensi dan review",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  },
+  {
+    "name": "Staf Umum dan Pengadaan",
+    "focus": "Kebutuhan kerja terpenuhi dengan spesifikasi, biaya, dan bukti yang dapat dipertanggungjawabkan.",
+    "owner": "Kepala umum; sumber register pengadaan, aset, dan layanan fasilitas.",
+    "note": "Harga murah tidak diberi bonus bila kualitas atau spesifikasi turun. Untuk petugas fasilitas tanpa kewenangan pengadaan, ganti indikator biaya dan pengadaan dengan penyelesaian gangguan serta kualitas perbaikan; total bobot tetap 100%.",
+    "id": "J16",
+    "group": "Pendukung dan Kontrol",
+    "metrics": [
+      {
+        "id": "16.01",
+        "name": "Pemenuhan pengadaan sesuai SLA",
+        "type": "Q",
+        "definition": "Persentase paket jatuh tempo yang diterima pengguna sesuai spesifikasi dan tenggat.",
+        "weight": 0.2,
+        "target": 95,
+        "targetNote": "Contoh ≥95%",
+        "source": "Register paket dan berita acara",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "16.02",
+        "name": "Kesesuaian hasil pengadaan",
+        "type": "Q",
+        "definition": "100 × paket yang lulus pemeriksaan mutu pertama ÷ paket diperiksa.",
+        "weight": 0.2,
+        "target": 98,
+        "targetNote": "Contoh ≥98%",
+        "source": "Uji spesifikasi dan penerimaan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "16.03",
+        "name": "Pengendalian biaya sah",
+        "type": "L",
+        "definition": "100 × biaya aktual paket diterima ÷ anggaran pembanding yang disetujui untuk spesifikasi setara.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "≤100% anggaran sah",
+        "source": "Kontrak, HPS, dan perubahan lingkup",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "16.04",
+        "name": "Pemeliharaan terjadwal",
+        "type": "Q",
+        "definition": "100 × pekerjaan pemeliharaan jatuh tempo yang selesai dan lolos pemeriksaan ÷ pekerjaan jatuh tempo.",
+        "weight": 0.2,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Jadwal dan bukti pemeliharaan",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "16.05",
+        "name": "Akurasi inventaris",
+        "type": "Q",
+        "definition": "100 × aset sampel yang fisik, identitas, lokasi, dan statusnya sesuai register ÷ aset sampel.",
+        "weight": 0.15,
+        "target": 100,
+        "targetNote": "100%",
+        "source": "Stock opname dan register aset",
+        "unit": "%",
+        "quality": false
+      },
+      {
+        "id": "16.06",
+        "name": "Kepatuhan pengadaan dan serah terima",
+        "type": "Z",
+        "definition": "Persetujuan, pemilihan pemasok, konflik kepentingan, dan bukti serah terima memenuhi kontrol wajib.",
+        "weight": 0.1,
+        "target": 0,
+        "targetNote": "Seluruh kontrol wajib terpenuhi",
+        "source": "Dokumen pengadaan dan pemeriksaan",
+        "unit": "Kejadian",
+        "quality": false
+      }
+    ]
+  }
+];
+const VERSION='1.0.0',KEY='bkk-kpi-v1',PERIOD='2026-SIMULASI';
+const MENU=[['dashboard','◫','Dashboard'],['scorecard','▤','Scorecard individu'],['catalog','▦','Katalog KPI'],['employees','♙','Data pegawai'],['verification','✓','Verifikasi penilaian'],['appeals','↔','Banding'],['reports','▥','Laporan dan ekspor'],['history','◷','Histori aktivitas'],['guide','ⓘ','Panduan penggunaan']];
+const BARS=['Integritas','Orientasi layanan','Kerja sama','Kepatuhan kerja','Pembelajaran dan perbaikan'];
+const STATES={DRAFT:'Draf',SUBMITTED:'Diajukan',REVISION:'Perlu revisi',VERIFIED:'Terverifikasi',FINAL:'Final'};
+const fmt=(v,d=2)=>typeof v==='number'?v.toLocaleString('id-ID',{maximumFractionDigits:d,minimumFractionDigits:d}):'—';
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>('R'+Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+let storageAvailable=true;
+function seed(){return {version:VERSION,employees:CATALOG.map((r,i)=>({id:'P'+String(i+1).padStart(3,'0'),code:'DEMO-'+String(i+1).padStart(3,'0'),name:'Contoh Pegawai '+String(i+1).padStart(2,'0'),unit:i<9?'KC Contoh':'Kantor Pusat Contoh',role:r.id})),cards:[],appeals:[],logs:[],settings:{resultWeight:.8,minCoverage:.7,capA:120,qualityGate:80,low:75,good:90,above:100,excellent:103}};}
+function makeCard(e,period=PERIOD){const r=CATALOG.find(x=>x.id===e.role);return {id:uid(),employee:e.id,role:e.role,employeeSnapshot:{name:e.name,code:e.code,unit:e.unit},period,state:'DRAFT',created:new Date().toISOString(),metrics:r.metrics.map(m=>({code:m.id,weight:m.weight,target:m.target,actual:null,status:'TUNDA',reason:'',naApproved:false,evidence:''})),behavior:[null,null,null,null,null],behaviorEvidence:'',comment:'',reviews:[],events:[]};}
+function starter(){const d=seed();d.cards=d.employees.map(e=>makeCard(e));const c=d.cards[0],values=[6300000000,1350000000,44,98,2.4,98];c.metrics.forEach((m,i)=>{m.actual=values[i];m.status='VALID';m.evidence='SIMULASI: laporan sumber '+m.code;});c.behavior=[4,3,4,3,4];c.behaviorEvidence='SIMULASI: pendampingan rekan dan perbaikan berkas. Ganti dengan bukti aktual.';d.logs.push({id:uid(),at:new Date().toISOString(),actor:'Sistem',action:'Data simulasi dibuat',detail:'16 pegawai dan 16 kontrak contoh.'});return d;}
+function load(){try{const t=localStorage.getItem(KEY);if(!t)return starter();return validate(JSON.parse(t));}catch(e){storageAvailable=false;return starter();}}
+let data=load(),view='dashboard',activeEmployee=data.employees[0]?.id||'',activeCard='',role='SDM',tab='metrics',catRole='',catSearch='',catPage=1,empSearch='',empPage=1,reportUnit='',verifyFilter='',saveTimer;
+function validate(d){
+ if(!d||d.version!==VERSION||!Array.isArray(d.employees)||!Array.isArray(d.cards)||!Array.isArray(d.appeals)||!Array.isArray(d.logs)||!d.settings)throw Error('Struktur atau versi cadangan tidak sesuai.');
+ if(d.employees.length>10000||d.cards.length>50000)throw Error('Jumlah data melebihi batas prototipe.');
+ if(new Set(d.employees.map(e=>e.id)).size!==d.employees.length||new Set(d.employees.map(e=>e.code)).size!==d.employees.length||new Set(d.cards.map(c=>c.id)).size!==d.cards.length)throw Error('Identitas duplikat dalam cadangan.');
+ const finite=v=>typeof v==='number'&&Number.isFinite(v),validId=v=>typeof v==='string'&&/^[A-Za-z0-9_-]+$/.test(v);let pairs=new Set();
+ for(const e of d.employees)if(!e||!validId(e.id)||!['id','code','name','unit','role'].every(k=>typeof e[k]==='string'&&e[k].length>0&&e[k].length<1000)||!CATALOG.some(r=>r.id===e.role))throw Error('Master pegawai tidak valid.');
+ for(const c of d.cards){const cr=CATALOG.find(r=>r.id===c.role);if(!c||!validId(c.id)||!cr||!d.employees.some(e=>e.id===c.employee)||!Array.isArray(c.metrics)||c.metrics.length!==6||!Array.isArray(c.behavior)||c.behavior.length!==5||!STATES[c.state]||typeof c.period!=='string'||!c.period.trim()||!Array.isArray(c.reviews)||!Array.isArray(c.events)||!c.employeeSnapshot||!['name','code','unit'].every(k=>typeof c.employeeSnapshot[k]==='string')||typeof c.comment!=='string')throw Error('Kontrak tidak valid.');let pair=c.employee+'|'+c.period;if(pairs.has(pair))throw Error('Kontrak pegawai dan periode duplikat.');pairs.add(pair);if(new Set(c.metrics.map(m=>m.code)).size!==6)throw Error('Kode KPI duplikat.');for(const m of c.metrics)if(!cr.metrics.some(x=>x.id===m.code)||!finite(m.weight)||!finite(m.target)||!(m.actual===null||finite(m.actual))||!['VALID','TUNDA','TIDAK_BERLAKU'].includes(m.status)||typeof m.reason!=='string'||typeof m.evidence!=='string'||typeof m.naApproved!=='boolean')throw Error('Input indikator tidak valid.');if(c.behavior.some(x=>x!==null&&(!Number.isInteger(x)||x<1||x>5))||typeof c.behaviorEvidence!=='string')throw Error('Perilaku tidak valid.');}
+ for(const a of d.appeals)if(!a||!validId(a.id)||typeof a.card!=='string'||!d.cards.some(c=>c.id===a.card)||!['OPEN','ACCEPTED','REJECTED'].includes(a.state)||!['reason','evidence','decision'].every(k=>typeof a[k]==='string')||!Array.isArray(a.history))throw Error('Data banding tidak valid.');
+ for(const l of d.logs)if(!l||!['at','actor','action','detail'].every(k=>typeof l[k]==='string'))throw Error('Histori tidak valid.');
+ const ref={resultWeight:[0,1],minCoverage:[.01,1],capA:[100,200],qualityGate:[0,100],low:[0,120],good:[0,120],above:[0,120],excellent:[0,120]};for(const[k,[lo,hi]]of Object.entries(ref))if(!finite(d.settings[k])||d.settings[k]<lo||d.settings[k]>hi)throw Error('Parameter skoring tidak valid.');if(!(d.settings.low<d.settings.good&&d.settings.good<=d.settings.above&&d.settings.above<d.settings.excellent))throw Error('Urutan rating tidak valid.');return d;
+}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(data));storageAvailable=true;return true;}catch(e){storageAvailable=false;toast('Data belum tersimpan di browser. Ekspor JSON untuk menyimpan perubahan.');return false;}}
+function log(action,detail){data.logs.unshift({id:uid(),at:new Date().toISOString(),actor:role+' (simulasi)',action,detail});if(data.logs.length>3000)data.logs.length=3000;persist();}
+function toast(s){const t=document.getElementById('toast');t.textContent=s;t.style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.style.display='none',5000);}
+function employee(c){return data.employees.find(e=>e.id===c.employee);}
+function roleOf(c){return CATALOG.find(r=>r.id===c.role);}
+function currentCard(){return data.cards.find(c=>c.id===activeCard)||data.cards.find(c=>c.employee===activeEmployee);}
+function metricScore(m,def){
+ if(!Number.isFinite(m.weight)||m.weight<=0||m.weight>1)return {state:'pending',message:'Bobot harus lebih dari 0 dan maksimal 100%.'};
+ if(m.status==='TIDAK_BERLAKU')return m.reason.trim()&&m.naApproved?{state:'na',score:null}:{state:'pending',message:'N/A memerlukan alasan dan persetujuan SDM.'};
+ if(m.status!=='VALID'||m.actual===null||!Number.isFinite(m.actual)||!m.evidence.trim())return {state:'pending',message:'Lengkapi realisasi, bukti, dan validasi data.'};
+ if(!Number.isFinite(m.target)||!Number.isFinite(m.weight)||m.weight<=0)return {state:'pending',message:'Target atau bobot tidak valid.'};
+ if(def.type==='Z'){if(m.target!==0||m.actual<0||!Number.isInteger(m.actual))return {state:'pending',message:'Z memakai target 0 dan jumlah kejadian bulat ≥0.'};return {state:'valid',score:m.actual===0?100:0};}
+ if(m.target<=0||(['Q','L'].includes(def.type)&&(m.actual<0||m.actual>100||m.target>100)))return {state:'pending',message:'Target harus positif; rasio memakai skala 0–100.'};
+ return {state:'valid',score:Math.max(0,Math.min(def.type==='A'?data.settings.capA:100,def.type==='L'?100*(2-m.actual/m.target):100*m.actual/m.target))};
+}
+function calculate(c){
+ if(!c)return {ready:false,message:'Belum ada kontrak.',rows:[],coverage:0};
+ const r=roleOf(c),rows=c.metrics.map(m=>{const def=r.metrics.find(x=>x.id===m.code);return {m,def,...metricScore(m,def)};});
+ const total=c.metrics.reduce((a,m)=>a+m.weight,0),valid=rows.filter(x=>x.state==='valid'),coverage=valid.reduce((a,x)=>a+x.m.weight,0),pending=rows.filter(x=>x.state==='pending').length;
+ const b=c.behavior.every(x=>Number.isInteger(x)&&x>=1&&x<=5)?c.behavior.reduce((a,n)=>a+[0,50,100,110,120][n-1],0)/5:null;
+ let message=!Number.isFinite(total)||Math.abs(total-1)>.000001?'Total bobot kontrak harus 100%.':pending?pending+' KPI belum lengkap.':coverage<data.settings.minCoverage?'Bobot data valid kurang dari '+fmt(data.settings.minCoverage*100,0)+'%.':b===null?'Lengkapi lima aspek perilaku.':'';
+ const h=!message?valid.reduce((a,x)=>a+x.score*x.m.weight,0)/coverage:null,n=h!==null?data.settings.resultWeight*h+(1-data.settings.resultWeight)*b:null;
+ const qualityGate=r.group==='Bisnis'&&valid.some(x=>(x.def.quality&&x.score<data.settings.qualityGate)||(x.def.type==='Z'&&x.score<100)),allQuality=valid.every(x=>x.def.type==='A'||x.score>=100),proof=c.behaviorEvidence.trim().length>0;
+ let rating='Belum dinilai';if(n!==null){const st=data.settings;rating=n<st.low?'Perlu perbaikan':n<st.good?'Cukup':n<=st.above||qualityGate?'Baik':n<st.excellent||!allQuality||!proof?'Sangat baik':'Istimewa';}
+ return {ready:!message,message,rows,total,coverage,pending,behavior:b,result:h,final:n,rating,qualityGate,allQuality};
+}
+function badge(t,type=''){const map={DRAFT:'',SUBMITTED:'blue',REVISION:'red',VERIFIED:'green',FINAL:'green',VALID:'green',TUNDA:'gold',TIDAK_BERLAKU:'',OPEN:'gold',ACCEPTED:'green',REJECTED:'red'};return `<span class="badge ${type||map[t]||''}">${esc(STATES[t]||({OPEN:'Dalam peninjauan',ACCEPTED:'Diterima',REJECTED:'Ditolak'})[t]||t)}</span>`;}
+function ratingBadge(r){return badge(r,r==='Istimewa'?'gold':r==='Sangat baik'||r==='Baik'?'green':r==='Perlu perbaikan'?'red':'');}
+function date(t){return new Date(t).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});}
+function header(title,desc,actions=''){return `<div class="reporttitle">BPR BKK Jateng • Sistem KPI Pegawai • Prototipe v${UI_VERSION}</div><div class="pagehead"><div><div class="eyebrow">Manajemen kinerja pegawai</div><h1>${title}</h1><div class="muted small">${desc}</div></div><div class="actions no-print">${actions}</div></div>`;}
+function stat(label,val,sub,icon='◫',gold=false){return `<div class="stat ${gold?'gold':''}"><div class="accent">${icon}</div><div class="label">${label}</div><div class="value">${val}</div><div class="sub">${sub}</div></div>`;}
+function nav(v){view=v;catPage=1;empPage=1;render();drawer(false);window.scrollTo(0,0);}
+function selectors(){document.getElementById('staffSelect').innerHTML=data.employees.map(e=>`<option value="${esc(e.id)}" ${e.id===activeEmployee?'selected':''}>${esc(e.name)}</option>`).join('');document.getElementById('roleSelect').value=role;}
+function visibleCards(){return role==='PEGAWAI'?data.cards.filter(c=>c.employee===activeEmployee):data.cards;}
+function render(){selectors();document.getElementById('nav').innerHTML=MENU.map(m=>`<button class="navbutton ${m[0]===view?'active':''}" ${m[0]===view?'aria-current="page"':''} onclick="nav('${m[0]}')"><span class="navicon">${icon(m[0])}</span>${m[2]}</button>`).join('');document.getElementById('crumb').textContent=MENU.find(x=>x[0]===view)?.[2]||'';const pages={dashboard,scorecard,catalog,employees,verification,appeals,reports,history,guide},main=document.getElementById('main');main.classList.toggle('entry-page',view==='scorecard');main.innerHTML=(!storageAvailable?'<div class="notice">Penyimpanan browser belum tersedia. Ekspor JSON sebelum menutup halaman.</div>':'')+pages[view]()+`<div class="footnote"><span>BKK Jateng · Sistem KPI Pegawai · v${UI_VERSION}</span><span>Prototipe lokal. Pilihan peran untuk simulasi, tanpa autentikasi server.</span></div>`;document.getElementById('bottomNav').innerHTML=bottomNavigation();document.getElementById('activeContextName').textContent=data.employees.find(e=>e.id===activeEmployee)?.name||'Pilih pegawai';decorateTables();const side=document.getElementById('sidebar');if(window.innerWidth<=760&&!side.classList.contains('open')){side.setAttribute('aria-hidden','true');side.setAttribute('inert','');}else{side.removeAttribute('aria-hidden');side.removeAttribute('inert');}syncSavedState(storageAvailable);}
+function tableCards(cards,withAction=true){return `<div class="tablewrap"><table><thead><tr><th>Pegawai</th><th>Jabatan</th><th>Periode</th><th class="number">Nilai akhir</th><th>Rating</th><th>Status</th>${withAction?'<th></th>':''}</tr></thead><tbody>${cards.map(c=>{const e=employee(c),q=calculate(c);return `<tr><td><strong>${esc(e.name)}</strong><div class="small muted">${esc(e.code)} · ${esc(c.employeeSnapshot.unit)}</div></td><td>${esc(roleOf(c).name)}</td><td>${esc(c.period)}</td><td class="number"><strong>${fmt(q.final)}</strong></td><td>${ratingBadge(q.rating)}</td><td>${badge(c.state)}</td>${withAction?`<td><button class="btn tiny" onclick="openCard('${esc(c.id)}')">Lihat detail</button></td>`:''}</tr>`;}).join('')||'<tr><td colspan="7" class="empty">Belum ada kontrak penilaian.</td></tr>'}</tbody></table></div>`;}
+function dashboard(){const cards=visibleCards(),ready=cards.filter(c=>calculate(c).ready),avg=ready.length?ready.reduce((a,c)=>a+calculate(c).final,0)/ready.length:null,submitted=cards.filter(c=>c.state==='SUBMITTED').length,groups=['Bisnis','Operasional','Pendukung dan Kontrol'],e=data.employees.find(e=>e.id===activeEmployee);return `<section class="portal-hero"><div><div class="eyebrow">BKK JATENG · RUANG KINERJA PEGAWAI</div><h1>Ringkasan kinerja<br>dan pengisian KPI</h1><p>${esc(e?.name||'Pilih pegawai')} · Pantau capaian, lengkapi realisasi, dan tindak lanjuti penilaian Anda.</p></div><button class="btn gold" onclick="openCard()">Isi realisasi KPI <span aria-hidden="true">→</span></button></section><div class="quick-access"><button class="quick-tile" onclick="openCard()"><span class="portal-icon">${icon('scorecard')}</span><span><strong>Lanjutkan pengisian</strong><small>Satu KPI untuk setiap langkah</small></span></button><button class="quick-tile" onclick="nav('catalog')"><span class="portal-icon">${icon('catalog')}</span><span><strong>Katalog KPI</strong><small>Definisi dan cara mengukur</small></span></button><button class="quick-tile" onclick="nav('reports')"><span class="portal-icon">${icon('reports')}</span><span><strong>Laporan penilaian</strong><small>Rekap dan cadangan data</small></span></button></div><div class="stats">${stat('Kontrak penilaian',cards.length,'Enam KPI pada setiap kontrak','▤')}${stat('Data lengkap',ready.length,'Siap untuk diperiksa','✓')}${stat('Rata-rata nilai',fmt(avg),'Hanya penilaian lengkap','↗',true)}${stat('Menunggu verifikasi',submitted,'Sudah diajukan ke atasan','◷')}</div><div class="grid2"><section class="card"><div class="cardhead"><div><h2>Kelengkapan penilaian</h2><div class="muted small">Dikelompokkan berdasarkan fungsi jabatan</div></div></div>${groups.map((g,i)=>{const a=cards.filter(c=>roleOf(c).group===g),v=a.filter(c=>calculate(c).ready).length;return `<div class="barrow"><span>${g}</span><div class="track"><div class="bar ${i===1?'green':i===2?'gold':''}" style="width:${a.length?v/a.length*100:0}%"></div></div><strong class="right">${v}/${a.length}</strong></div>`;}).join('')}<div class="metric-note">Data belum lengkap tidak dihitung sebagai nilai nol.</div></section><section class="card"><div class="cardhead"><h2>Perlu ditindaklanjuti</h2></div><div class="event"><strong>${cards.length-ready.length} kontrak belum lengkap</strong><small>Periksa realisasi, bukti, status data, dan perilaku.</small></div><div class="event"><strong>${cards.filter(c=>calculate(c).qualityGate).length} kontrak perlu reviu kualitas</strong><small>Rating insentif mengikuti batas kualitas.</small></div><button class="btn tiny" onclick="nav('verification')">Lihat verifikasi</button></section></div><section class="card"><div class="cardhead"><div><h2>Penilaian pegawai</h2><div class="muted small">Enam kontrak pertama</div></div><button class="btn tiny" onclick="nav('reports')">Lihat semua</button></div>${tableCards(cards.slice(0,6))}</section><div class="notice info">Mode simulasi · Tersedia 16 pegawai contoh. Data tersimpan hanya pada browser ini.</div>`;}
+function openCard(id){if(id){const c=data.cards.find(c=>c.id===id);if(!c)return;if(role==='PEGAWAI'&&c.employee!==activeEmployee)return toast('Pilih pegawai aktif yang sesuai.');activeCard=id;activeEmployee=c.employee;}else{activeCard=data.cards.find(c=>c.employee===activeEmployee)?.id||'';}activeMetric=0;tab='metrics';nav('scorecard');}
+function canEdit(c){return ['DRAFT','REVISION'].includes(c.state)&&(role==='SDM'||(role==='PEGAWAI'&&c.employee===activeEmployee));}
+function inputAttr(disabled){return disabled?'disabled':'';}
+function scorecard(){const c=currentCard();if(!c)return header('Pengisian KPI','Belum ada kontrak penilaian.')+'<section class="card empty">Tambahkan kontrak melalui Data pegawai terlebih dahulu.<br><button class="btn primary" style="margin-top:15px" onclick="nav(\'employees\')">Buka data pegawai</button></section>';if(role==='PEGAWAI'&&c.employee!==activeEmployee)return header('Pengisian KPI','Pilih pegawai yang mempunyai kontrak.');activeCard=c.id;const e=employee(c),r=roleOf(c),q=calculate(c),editable=canEdit(c),canContract=editable&&role==='SDM',n=q.rows.filter(x=>x.state!=='pending').length;activeMetric=Math.max(0,Math.min(5,activeMetric));const options=data.cards.filter(x=>x.employee===c.employee).map(x=>`<option value="${esc(x.id)}" ${x.id===c.id?'selected':''}>${esc(x.period)}</option>`).join('');
+ const info=`<section class="card profile-summary"><div class="cardhead"><div class="profile"><div class="avatar">${esc(e.name.split(' ').slice(0,2).map(x=>x[0]).join(''))}</div><div><h2>${esc(e.name)}</h2><div class="context-meta">${esc(e.code)} · ${esc(c.employeeSnapshot.unit)}<br>${esc(r.name)}</div></div></div><div class="entry-context"><select aria-label="Periode kontrak" onchange="activeCard=this.value;activeMetric=0;render()">${options}</select>${badge(c.state)}</div></div>${c.comment?`<p class="helper"><strong>Catatan penilai:</strong> ${esc(c.comment)}</p>`:''}</section>`;
+ const tabs=`<div class="tabs no-print" role="tablist" aria-label="Bagian penilaian">${[['metrics','Isi KPI'],['behavior','Perilaku'],['review','Periksa'],['events','Riwayat']].map(t=>`<button role="tab" aria-selected="${tab===t[0]}" class="tab ${tab===t[0]?'active':''}" onclick="setEntryTab('${t[0]}')">${t[1]}</button>`).join('')}</div>`;
+ const stepper=`<section class="step-overview no-print"><div class="top"><strong>KPI ${activeMetric+1} dari 6</strong><span id="wizardProgress">${n} lengkap</span></div><div class="step-buttons">${c.metrics.map((m,i)=>{const v=q.rows[i];return `<button class="stepbtn ${v.state!=='pending'?'complete':''} ${i===activeMetric?'active':''}" id="stepBtn${i}" ${i===activeMetric?'aria-current="step"':''} onclick="moveMetric(${i})" aria-label="KPI ${i+1}: ${esc(v.def.name)}${v.state!=='pending'?', lengkap':''}"><span>${i+1}</span><span class="check" id="stepMark${i}">${v.state!=='pending'?'✓':''}</span></button>`;}).join('')}</div><div class="step-status">Isian tersimpan otomatis. Anda dapat berpindah langkah kapan saja.</div></section>`;
+ const history=`<section class="card history-view"><h2>Riwayat penilaian</h2><div class="timeline">${[{at:c.created,action:'Kontrak dibuat',detail:c.period},...c.events].reverse().map(x=>`<div class="event"><strong>${esc(x.action)}</strong><div>${esc(x.detail||'')}</div><small>${date(x.at)}</small></div>`).join('')}</div></section>`;
+ const actions=tab==='metrics'?`<div class="entry-actions no-print"><button class="btn" onclick="moveMetric(${activeMetric-1})" ${activeMetric===0?'disabled':''}>← Kembali</button><span class="action-text" data-save-state>Tersimpan di browser</span><div class="actions-right"><button class="btn save-only" onclick="saveEntry()">Simpan draf</button><button class="btn primary" onclick="moveEntry()">${activeMetric===5?'Periksa isian':editable?'Simpan & lanjut':'Lanjut'} →</button></div></div>`:'';
+ return `<div class="entry-header"><div><div class="eyebrow">PENILAIAN PEGAWAI</div><h1>Pengisian KPI</h1></div><div class="actions no-print"><span class="save-state" data-save-state>Tersimpan di browser</span><button class="btn" onclick="contextDialog()">Ganti pegawai</button></div></div>${info}${mobileScoreSummary(q)}<div class="entry-shell"><div class="entry-main" id="entryAnchor">${tabs}${tab==='metrics'?stepper+`<div class="wizard-print-hidden">${metricForm(c,c.metrics[activeMetric],activeMetric,editable,canContract)}</div>`+actions+`<p class="entry-note">${editable?'Lengkapi realisasi dan bukti, lalu pilih status data. Bagian yang belum lengkap tetap dapat disimpan sebagai draf.':'Kontrak ini terkunci. Untuk perbaikan, penilai perlu mengembalikannya ke status Revisi.'}</p>`:tab==='behavior'?behaviorForm(c,editable):tab==='review'?reviewEntry(c,q):history}${printMetrics(c,q)}</div>${summaryAside(c,q)}</div>`;
+}
+function metricForm(c,m,i,editable,contract){const d=roleOf(c).metrics.find(x=>x.id===m.code),v=metricScore(m,d),label=d.type==='Z'?'Jumlah pelanggaran terverifikasi':`Realisasi (${d.unit})`;return `<section class="entry-card"><div class="kpihead"><div><div class="kpicode">${m.code} · ${esc(d.unit)}${d.quality?' · KUALITAS UTAMA':''}</div><strong>${esc(d.name)}</strong></div><span class="badge blue" id="weightBadge">Bobot ${fmt(m.weight*100,0)}%</span></div><div class="kpibody"><p class="definition">${esc(d.definition)}</p><div class="target-reference"><div class="reference-box"><label>Target kontrak</label><strong id="targetReference">${entryNumber(m.target,d.unit)} <small>${esc(d.unit)}</small></strong></div><div class="reference-box"><label>Jenis pengukuran</label><strong>${{A:'Makin tinggi',Q:'Pemenuhan',L:'Makin rendah',Z:'Kontrol wajib'}[d.type]} <small>(${d.type})</small></strong></div></div><div class="fieldgroup main-field"><label for="actual${i}">${esc(label)} <span class="required">*</span></label><div class="actual-wrap"><input id="actual${i}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" aria-describedby="actualPreview${i} actualError${i}" value="${esc(entryNumber(m.actual,d.unit))}" ${inputAttr(!editable)} placeholder="Masukkan angka" oninput="editLocalizedActual(${i},this.value)" onblur="formatActualInput(${i},this)"><span class="input-unit">${esc(d.unit)}</span></div><div class="number-preview" id="actualPreview${i}">${m.actual===null?'Belum ada realisasi.':`Terbaca: ${entryNumber(m.actual,d.unit)} ${esc(d.unit)}`}</div><div class="field-error" id="actualError${i}" role="status"></div><div class="helper">${d.type==='Z'?'Isi 0 bila tidak ada pelanggaran dan register telah diperiksa. Kosong bukan berarti nol.':d.unit==='%'?'Isi 98 untuk 98%. Desimal dapat ditulis 98,5.':d.unit==='Rp'?'Gunakan rupiah penuh. Contoh: 1.500.000.000.':`Gunakan jumlah ${esc(d.unit)} sesuai laporan sumber.`}</div></div><div class="fieldgroup"><label for="evidence${i}">Referensi bukti <span class="required">*</span></label><textarea id="evidence${i}" rows="2" ${inputAttr(!editable)} placeholder="Nomor laporan, tanggal, nomor tiket, atau lokasi arsip" oninput="editMetric(${i},'evidence',this.value)">${esc(m.evidence)}</textarea><div class="helper">${esc(d.source)}. Yang disimpan adalah referensi, bukan berkas unggahan.</div></div><div class="fieldgroup"><label for="status${i}">Status data <span class="required">*</span></label><select id="status${i}" ${inputAttr(!editable)} onchange="editMetric(${i},'status',this.value);render()">${[['TUNDA','Belum lengkap / belum diperiksa'],['VALID','Data lengkap dan sudah diperiksa'],['TIDAK_BERLAKU','Tidak berlaku pada periode ini']].map(x=>`<option value="${x[0]}" ${m.status===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div>${m.status==='TIDAK_BERLAKU'?`<div class="fieldgroup"><label for="naReason${i}">Alasan tidak berlaku <span class="required">*</span></label><textarea id="naReason${i}" ${inputAttr(!editable)} oninput="editMetric(${i},'reason',this.value)">${esc(m.reason)}</textarea></div><div class="fieldgroup"><label for="naApproved${i}"><input id="naApproved${i}" type="checkbox" ${m.naApproved?'checked':''} ${inputAttr(role!=='SDM'||!editable)} onchange="editMetric(${i},'naApproved',this.checked)"> Pengecualian disetujui SDM (simulasi)</label><div class="helper">Bobot hanya dikecualikan setelah alasan dan persetujuan lengkap.</div></div>`:''}<details class="contract-details"><summary>${contract?'Atur target dan bobot kontrak':'Lihat rumus dan ketentuan'}</summary><p class="helper">${esc(typeGuide(d.type))}</p>${contract?`<div class="contract-grid"><div class="fieldgroup"><label for="target${i}">Target (${esc(d.unit)})</label><input id="target${i}" type="text" inputmode="decimal" value="${esc(entryNumber(m.target,d.unit))}" oninput="editLocalizedContract(${i},this.value)"></div><div class="fieldgroup"><label for="weight${i}">Bobot (%)</label><input id="weight${i}" type="number" inputmode="decimal" min="1" max="100" value="${fmt(m.weight*100,0)}" oninput="editMetric(${i},'weight',this.value)"></div></div><div class="inline-help">Total bobot enam KPI harus 100%. Target katalog masih berupa contoh dan perlu disepakati.</div>`:''}</details><div class="kpiresult"><span>Skor indikator<strong id="metricScore${i}">${fmt(v.score)}</strong></span><span>Nilai berbobot<strong id="metricWeighted${i}">${v.state==='valid'?fmt(v.score*m.weight):'—'}</strong></span><span class="metric-state muted" id="metricMsg${i}">${esc(v.state==='na'?'Tidak berlaku disetujui':v.message||'Data lengkap')}</span></div></div></section>`;}
+function behaviorForm(c,editable){const allow=role==='SDM'&&editable;return `<section class="card"><div class="cardhead"><div><h2>Penilaian perilaku</h2><div class="helper">Pilih nilai pada setiap aspek. Nilai 3 berarti memenuhi standar.</div></div></div>${!allow?'<div class="notice info">Bagian ini diisi penilai SDM pada prototipe. Ganti peran melalui menu pegawai bila ingin mencoba.</div>':''}${BARS.map((b,i)=>`<div class="fieldgroup"><label>${i+1}. ${b}</label><div class="behavior-choices" role="group" aria-label="${esc(b)}">${[1,2,3,4,5].map(x=>`<button class="behavior-choice ${c.behavior[i]===x?'active':''}" aria-label="${esc(b)} nilai ${x}" aria-pressed="${c.behavior[i]===x}" ${inputAttr(!allow)} onclick="editBehavior(${i},'${x}');render()">${x}</button>`).join('')}</div><div class="behavior-caption">${c.behavior[i]?['Belum sesuai dan berdampak','Belum konsisten','Memenuhi standar','Melampaui standar','Perbaikan berdampak terukur'][c.behavior[i]-1]:'Belum dinilai'}</div></div>`).join('')}<div class="fieldgroup"><label for="behaviorEvidence">Bukti perilaku dan kontribusi tambahan</label><textarea id="behaviorEvidence" ${inputAttr(!allow)} placeholder="Catat kejadian, tindakan, dan dampaknya." oninput="editBehaviorProof(this.value)">${esc(c.behaviorEvidence)}</textarea><div class="helper">Nilai 1–2 dan 4–5 perlu bukti. Konversi: 1 = 0, 2 = 50, 3 = 100, 4 = 110, 5 = 120.</div></div><button class="btn primary" onclick="setEntryTab('review')">Periksa penilaian →</button></section>`;}
+function editMetric(i,key,value){const c=currentCard();if(!canEdit(c))return;if(['target','weight'].includes(key)&&role!=='SDM')return;if(key==='naApproved'&&role!=='SDM')return;const m=c.metrics[i];m[key]=['target','actual','weight'].includes(key)?value===''?(key==='actual'?null:0):Number(value)/(key==='weight'?100:1):value;const ok=persist();syncSavedState(ok);updateScores();clearTimeout(saveTimer);saveTimer=setTimeout(()=>{log('Input KPI disimpan',employee(c).name+' · '+m.code+' · '+key);},900);}
+function editBehavior(i,value){const c=currentCard();if(role!=='SDM'||!canEdit(c))return;c.behavior[i]=value===''?null:Number(value);persist();updateScores();}
+function editBehaviorProof(value){const c=currentCard();if(role!=='SDM'||!canEdit(c))return;c.behaviorEvidence=value;persist();updateScores();}
+function updateScores(){const c=currentCard(),q=calculate(c);for(const [id,v]of [['resultScore',fmt(q.result)],['behaviorScore',fmt(q.behavior)],['finalScore',fmt(q.final)],['ratingScore',q.rating],['calcMessage',q.message|| (q.qualityGate?'Batas kualitas bisnis berlaku.':'Seluruh syarat penghitungan terpenuhi.')],['mobileFinal',fmt(q.final)],['mobileResult',fmt(q.result)],['mobileBehavior',fmt(q.behavior)],['mobileRating',q.rating],['mobileProgress',q.rows.filter(x=>x.state!=='pending').length+' / 6'],['mobileCalc',q.message||'Seluruh syarat penghitungan terpenuhi.']]){const el=document.getElementById(id);if(el)el.textContent=v;}q.rows.forEach((x,i)=>{const e=document.getElementById('metricScore'+i);if(e)e.textContent=fmt(x.score);const w=document.getElementById('metricWeighted'+i);if(w)w.textContent=x.state==='valid'?fmt(x.score*x.m.weight):'—';const m=document.getElementById('metricMsg'+i);if(m)m.textContent=x.state==='na'?'Tidak berlaku disetujui':x.message||'Data lengkap';const b=document.getElementById('stepBtn'+i);b?.classList.toggle('complete',x.state!=='pending');const mark=document.getElementById('stepMark'+i);if(mark)mark.textContent=x.state!=='pending'?'✓':'';});const n=q.rows.filter(x=>x.state!=='pending').length;for(const[id,val]of[['sideProgress',n+' / 6'],['wizardProgress',n+' lengkap']]){const e=document.getElementById(id);if(e)e.textContent=val;}const bar=document.getElementById('sideProgressBar');if(bar)bar.style.width=n/6*100+'%';const warning=document.getElementById('weightWarning');if(warning)warning.textContent=`Bobot kontrak ${fmt(q.total*100,0)}% · Bobot valid ${fmt(q.coverage*100,0)}%`;const current=c.metrics[activeMetric],def=roleOf(c).metrics.find(x=>x.id===current.code),ref=document.getElementById('targetReference');if(ref)ref.textContent=entryNumber(current.target,def.unit)+' '+def.unit;const wb=document.getElementById('weightBadge');if(wb)wb.textContent='Bobot '+fmt(current.weight*100,0)+'%';}
+function cardEvent(c,action,detail){c.events.push({at:new Date().toISOString(),action,detail,actor:role});log(action,employee(c).name+' · '+c.period+' · '+detail);}
+function submitCard(){const c=currentCard();if(!canEdit(c))return;const q=calculate(c);if(!q.ready)return toast(q.message);confirmDialog('Ajukan penilaian','Kontrak dikunci untuk perubahan sampai atasan mengembalikan revisi. Nilai akhir sementara '+fmt(q.final)+'.',()=>{c.state='SUBMITTED';cardEvent(c,'Penilaian diajukan','Menunggu pemeriksaan atasan.');render();toast('Penilaian diajukan. Ganti peran simulasi ke Atasan untuk mencoba verifikasi.');});}
+function catalog(){let list=CATALOG.filter(r=>!catRole||r.id===catRole).flatMap(r=>r.metrics.map(m=>({...m,role:r}))).filter(m=>(m.name+' '+m.definition+' '+m.role.name).toLowerCase().includes(catSearch.toLowerCase()));const pages=Math.max(1,Math.ceil(list.length/10));catPage=Math.min(catPage,pages);return header('Katalog KPI terukur','96 indikator untuk 16 jabatan. Total bobot standar per jabatan 100%.')+`<div class="card"><div class="toolbar"><input placeholder="Cari indikator atau jabatan..." aria-label="Cari KPI" value="${esc(catSearch)}" oninput="catSearch=this.value;catPage=1;renderCatalogBody()"><select aria-label="Filter jabatan" onchange="catRole=this.value;catPage=1;render()"><option value="">Semua jabatan</option>${CATALOG.map(r=>`<option value="${r.id}" ${catRole===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div><div id="catalogBody">${catalogTable(list,pages)}</div></div><div class="notice info">Target katalog adalah simulasi. Penetapan target aktual memperhatikan RBB, baseline, kapasitas kerja, kompleksitas tugas, dan batas risiko.</div>`;}
+function catalogTable(list,pages){const slice=list.slice((catPage-1)*10,catPage*10);return `<div class="catalog-desktop tablewrap"><table><thead><tr><th>Kode / jabatan</th><th>Indikator dan definisi</th><th>Jenis</th><th class="number">Bobot</th><th>Target contoh</th></tr></thead><tbody>${slice.map(m=>`<tr><td><strong>${m.id}</strong><div class="muted small" style="min-width:140px">${esc(m.role.name)}</div></td><td><button class="rowlink" onclick="metricDetail('${m.id}')">${esc(m.name)}</button><div class="small muted" style="min-width:260px;max-width:600px">${esc(m.definition)}</div></td><td>${badge(m.type,'blue')}</td><td class="number">${fmt(m.weight*100,0)}%</td><td>${entryNumber(m.target,m.unit)} ${esc(m.unit)}<div class="small muted">${esc(m.targetNote)}</div></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Tidak ada KPI sesuai pencarian.</td></tr>'}</tbody></table></div><div class="catalog-tiles">${slice.map(m=>`<article class="catalog-tile"><div class="tile-meta"><span>${m.id} · ${esc(m.role.name)}</span>${badge(m.type,'blue')}</div><h3>${esc(m.name)}</h3><p>${esc(m.definition)}</p><div class="tile-values"><span>Bobot <strong>${fmt(m.weight*100,0)}%</strong></span><span>Target <strong>${entryNumber(m.target,m.unit)} ${esc(m.unit)}</strong></span></div><button class="btn tiny" style="margin-top:13px;width:100%" onclick="metricDetail('${m.id}')">Lihat rumus dan ketentuan</button></article>`).join('')||'<div class="empty">Tidak ada KPI sesuai pencarian.</div>'}</div>${pager(catPage,pages,list.length,'catPage')}`;}
+function renderCatalogBody(){const list=CATALOG.filter(r=>!catRole||r.id===catRole).flatMap(r=>r.metrics.map(m=>({...m,role:r}))).filter(m=>(m.name+' '+m.definition+' '+m.role.name).toLowerCase().includes(catSearch.toLowerCase()));document.getElementById('catalogBody').innerHTML=catalogTable(list,Math.max(1,Math.ceil(list.length/10)));}
+function pager(page,pages,n,key){return `<div class="pagination"><span>${n} data · Halaman ${page} / ${pages}</span><button onclick="${key}=Math.max(1,${page-1});render()" ${page===1?'disabled':''}>Sebelumnya</button><button class="active">${page}</button><button onclick="${key}=Math.min(${pages},${page+1});render()" ${page===pages?'disabled':''}>Berikutnya</button></div>`;}
+function metricDetail(id){const r=CATALOG.find(r=>r.metrics.some(m=>m.id===id)),m=r.metrics.find(m=>m.id===id);modal('Definisi KPI '+m.id,`<h3>${esc(m.name)}</h3><p>${esc(m.definition)}</p><p class="small"><strong>Sumber:</strong> ${esc(m.source)}</p><p class="small"><strong>Target contoh:</strong> ${esc(m.targetNote)}</p><p class="small"><strong>Jenis ${m.type}:</strong> ${esc(typeGuide(m.type))}</p><p class="small muted">${esc(r.note)}</p>`,`<button class="btn" onclick="closeModal()">Tutup</button>`);}
+function typeGuide(type){return {A:'Skor 100 × realisasi ÷ target; maksimum 120, minimum 0.',Q:'Skor 100 × realisasi ÷ target; maksimum 100, minimum 0.',L:'Skor 100 × (2 − realisasi ÷ target); maksimum 100, minimum 0.',Z:'Target 0. Skor 100 untuk nol pelanggaran terverifikasi, 0 bila ada pelanggaran.'}[type];}
+function employees(){const all=data.employees.filter(e=>(e.name+' '+e.code+' '+e.unit).toLowerCase().includes(empSearch.toLowerCase())),pages=Math.max(1,Math.ceil(all.length/10));empPage=Math.min(empPage,pages);return header('Data pegawai','Identitas tetap terhubung dengan jabatan dan kontrak penilaian.',role==='SDM'?'<button class="btn primary" onclick="employeeDialog()">Tambah pegawai</button>':'')+`<section class="card"><div class="toolbar"><input placeholder="Cari nama, kode, atau unit..." aria-label="Cari pegawai" value="${esc(empSearch)}" onchange="empSearch=this.value;empPage=1;render()"></div><div class="tablewrap"><table><thead><tr><th>Pegawai</th><th>Unit</th><th>Jabatan</th><th>Kontrak</th><th>Tindakan</th></tr></thead><tbody>${all.slice((empPage-1)*10,empPage*10).map(e=>`<tr><td><strong>${esc(e.name)}</strong><div class="small muted">${esc(e.code)} · ${esc(e.id)}</div></td><td>${esc(e.unit)}</td><td>${esc(CATALOG.find(r=>r.id===e.role).name)}</td><td>${data.cards.filter(c=>c.employee===e.id).length}</td><td><div class="actions">${role==='SDM'?`<button class="btn tiny" onclick="employeeDialog('${e.id}')">Edit</button><button class="btn tiny" onclick="newContract('${e.id}')">Kontrak baru</button>`:''}<button class="btn tiny" onclick="activeEmployee='${e.id}';openCard()">Scorecard</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Pegawai tidak ditemukan.</td></tr>'}</tbody></table></div>${pager(empPage,pages,all.length,'empPage')}</section>`;}
+function employeeDialog(id){if(role!=='SDM')return;const e=data.employees.find(e=>e.id===id)||{name:'',code:'',unit:'',role:'J01'};modal(id?'Edit pegawai':'Tambah pegawai',`<form id="employeeForm" onsubmit="saveEmployee(event,'${id||''}')"><div class="formgrid"><div class="fieldgroup"><label for="empCode">Kode pegawai</label><input id="empCode" name="code" required maxlength="50" value="${esc(e.code)}"></div><div class="fieldgroup"><label for="empName">Nama</label><input id="empName" name="name" required maxlength="150" value="${esc(e.name)}"></div><div class="fieldgroup"><label for="empUnit">Unit kerja</label><input id="empUnit" name="unit" required maxlength="150" value="${esc(e.unit)}"></div><div class="fieldgroup"><label for="empRole">Jabatan</label><select id="empRole" name="role">${CATALOG.map(r=>`<option value="${r.id}" ${r.id===e.role?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div></div><p class="small muted">Perubahan jabatan tidak mengubah kontrak lama. Buat kontrak periode baru untuk jabatan baru.</p></form>`,`<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" type="submit" form="employeeForm">Simpan pegawai</button>`);}
+function saveEmployee(ev,id){ev.preventDefault();if(role!=='SDM')return;const f=new FormData(ev.target),code=f.get('code').trim(),name=f.get('name').trim(),unit=f.get('unit').trim();if(!code||!name||!unit)return toast('Lengkapi kode, nama, dan unit.');if(data.employees.some(e=>e.code===code&&e.id!==id))return toast('Kode pegawai sudah digunakan.');const old=data.employees.find(e=>e.id===id),e={id:id||uid(),code,name,unit,role:f.get('role')};if(old)Object.assign(old,e);else data.employees.push(e);log(old?'Data pegawai diperbarui':'Pegawai ditambahkan',name);closeModal();render();toast('Data pegawai disimpan.');}
+function newContract(id){if(role!=='SDM')return;const e=data.employees.find(e=>e.id===id);modal('Kontrak penilaian baru',`<form id="contractForm" onsubmit="saveContract(event,'${id}')"><p>${esc(e.name)} · ${esc(CATALOG.find(r=>r.id===e.role).name)}</p><div class="fieldgroup"><label for="newPeriod">Nama periode</label><input id="newPeriod" name="period" required placeholder="Contoh: 2027-S1" maxlength="60"></div><div class="notice">Target awal ditarik dari katalog contoh. Sesuaikan dengan periode kontrak; target tahunan tidak otomatis menjadi target semester.</div></form>`,`<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" form="contractForm" type="submit">Buat kontrak</button>`);}
+function saveContract(ev,id){ev.preventDefault();if(role!=='SDM')return;const period=new FormData(ev.target).get('period').trim();if(!period)return;if(data.cards.some(c=>c.employee===id&&c.period===period))return toast('Kontrak untuk pegawai dan periode ini sudah ada.');const c=makeCard(data.employees.find(e=>e.id===id),period);data.cards.push(c);log('Kontrak dibuat',employee(c).name+' · '+period);closeModal();openCard(c.id);}
+function verification(){const all=visibleCards().filter(c=>!verifyFilter||c.state===verifyFilter);return header('Verifikasi penilaian','Periksa bukti, konsistensi target, dan catatan sebelum finalisasi.')+`<div class="notice info">Pilihan peran adalah simulasi alur. SDM dapat memfinalisasi kontrak yang sudah diverifikasi Atasan. Perubahan pada browser ini tidak dikirim ke pihak lain.</div><section class="card"><div class="toolbar"><select aria-label="Filter status verifikasi" onchange="verifyFilter=this.value;render()"><option value="">Semua status</option>${Object.entries(STATES).map(([k,v])=>`<option value="${k}" ${verifyFilter===k?'selected':''}>${v}</option>`).join('')}</select></div><div class="tablewrap"><table><thead><tr><th>Pegawai dan periode</th><th>Hasil</th><th>Status</th><th>Tindakan</th></tr></thead><tbody>${all.map(c=>{const q=calculate(c);return `<tr><td><strong>${esc(employee(c).name)}</strong><div class="small muted">${esc(c.period)} · ${esc(roleOf(c).name)}</div></td><td>${fmt(q.final)}<div>${ratingBadge(q.rating)}</div></td><td>${badge(c.state)}</td><td><div class="actions"><button class="btn tiny" onclick="openCard('${c.id}')">Periksa</button>${c.state==='SUBMITTED'&&role==='ATASAN'?`<button class="btn tiny primary" onclick="reviewDialog('${c.id}','VERIFIED')">Verifikasi</button><button class="btn tiny danger" onclick="reviewDialog('${c.id}','REVISION')">Minta revisi</button>`:''}${c.state==='VERIFIED'&&role==='SDM'?`<button class="btn tiny primary" onclick="reviewDialog('${c.id}','FINAL')">Finalisasi</button><button class="btn tiny" onclick="reviewDialog('${c.id}','REVISION')">Kembalikan</button>`:''}</div></td></tr>`;}).join('')}</tbody></table></div></section>`;}
+function reviewDialog(id,next){const c=data.cards.find(c=>c.id===id);if(!canTransition(c,next))return toast('Peran atau status belum sesuai.');modal(next==='REVISION'?'Permintaan revisi':next==='FINAL'?'Finalisasi penilaian':'Verifikasi atasan',`<form id="reviewForm" onsubmit="saveReview(event,'${id}','${next}')"><p><strong>${esc(employee(c).name)}</strong> · ${esc(c.period)}</p><div class="fieldgroup"><label for="reviewComment">Catatan pemeriksaan</label><textarea id="reviewComment" name="comment" required placeholder="Ringkas hasil pemeriksaan atau hal yang perlu diperbaiki."></textarea></div>${next!=='REVISION'?'<label class="small"><input name="checked" type="checkbox" required> Saya telah memeriksa data, referensi bukti, dan kelayakan pengecualian.</label>':''}</form>`,`<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" form="reviewForm" type="submit">${next==='REVISION'?'Kirim revisi':next==='FINAL'?'Tetapkan final':'Verifikasi'}</button>`);}
+function canTransition(c,next){return c&&((c.state==='SUBMITTED'&&role==='ATASAN'&&['VERIFIED','REVISION'].includes(next))||(c.state==='VERIFIED'&&role==='SDM'&&['FINAL','REVISION'].includes(next)));}
+function saveReview(ev,id,next){ev.preventDefault();const c=data.cards.find(c=>c.id===id);if(!canTransition(c,next))return;const f=new FormData(ev.target),comment=f.get('comment').trim();if(!comment)return toast('Catatan wajib diisi.');if(next!=='REVISION'&&!calculate(c).ready)return toast('Data penilaian belum lengkap.');c.comment=comment;c.state=next;c.reviews.push({at:new Date().toISOString(),role,next,comment,score:calculate(c).final});cardEvent(c,next==='VERIFIED'?'Atasan memverifikasi':next==='FINAL'?'Penilaian ditetapkan final':'Revisi diminta',comment);closeModal();render();toast('Status penilaian diperbarui.');}
+function appeals(){const list=data.appeals.filter(a=>role!=='PEGAWAI'||data.cards.find(c=>c.id===a.card)?.employee===activeEmployee);return header('Banding penilaian','Permohonan, bukti, dan keputusan dicatat dalam histori.',`<button class="btn primary" onclick="appealDialog()">Ajukan banding</button>`)+`<section class="card"><div class="tablewrap"><table><thead><tr><th>Pegawai dan periode</th><th>Permohonan</th><th>Status</th><th>Keputusan</th><th></th></tr></thead><tbody>${list.map(a=>{const c=data.cards.find(c=>c.id===a.card);return `<tr><td><strong>${esc(employee(c).name)}</strong><div class="small muted">${esc(c.period)}<br>${date(a.created)}</div></td><td style="max-width:350px">${esc(a.reason)}<div class="small muted">Bukti: ${esc(a.evidence)}</div></td><td>${badge(a.state)}</td><td style="max-width:280px">${esc(a.decision||'Belum diputus')}</td><td>${a.state==='OPEN'&&role==='SDM'?`<button class="btn tiny" onclick="decideAppeal('${a.id}')">Tinjau</button>`:''}</td></tr>`;}).join('')||'<tr><td colspan="5" class="empty">Belum ada banding. Banding tersedia setelah penilaian berstatus Final.</td></tr>'}</tbody></table></div></section>`;}
+function appealDialog(){const cards=visibleCards().filter(c=>c.state==='FINAL'&&!data.appeals.some(a=>a.card===c.id&&a.state==='OPEN'));if(!cards.length)return toast('Belum ada penilaian Final yang dapat diajukan banding.');modal('Ajukan banding',`<form id="appealForm" onsubmit="saveAppeal(event)"><div class="fieldgroup"><label>Kontrak penilaian</label><select name="card">${cards.map(c=>`<option value="${c.id}">${esc(employee(c).name)} · ${esc(c.period)}</option>`).join('')}</select></div><div class="fieldgroup"><label>Komponen dan alasan banding</label><textarea name="reason" required></textarea></div><div class="fieldgroup"><label>Referensi bukti pendukung</label><input name="evidence" required></div></form>`,`<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" form="appealForm" type="submit">Ajukan</button>`);}
+function saveAppeal(ev){ev.preventDefault();const f=new FormData(ev.target),c=data.cards.find(c=>c.id===f.get('card'));if(!c||c.state!=='FINAL'||(role==='PEGAWAI'&&c.employee!==activeEmployee)||data.appeals.some(a=>a.card===c.id&&a.state==='OPEN'))return;const reason=f.get('reason').trim(),evidence=f.get('evidence').trim();if(!reason||!evidence)return toast('Alasan dan bukti wajib diisi.');data.appeals.unshift({id:uid(),card:c.id,reason,evidence,created:new Date().toISOString(),state:'OPEN',decision:'',history:[],before:{score:calculate(c).final,rating:calculate(c).rating}});cardEvent(c,'Banding diajukan',reason);closeModal();render();toast('Banding dicatat di browser ini.');}
+function decideAppeal(id){if(role!=='SDM')return;const a=data.appeals.find(a=>a.id===id);modal('Keputusan banding',`<form id="decisionForm" onsubmit="saveDecision(event,'${id}')"><p>${esc(a.reason)}</p><div class="fieldgroup"><label>Keputusan</label><select name="decision"><option value="ACCEPTED">Terima dan buka revisi</option><option value="REJECTED">Tolak dengan alasan</option></select></div><div class="fieldgroup"><label>Alasan keputusan</label><textarea name="comment" required></textarea></div><p class="small muted">Banding diterima membuka revisi dan memerlukan verifikasi ulang. Nilai sebelum banding tetap tersimpan pada catatan permohonan.</p></form>`,`<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" form="decisionForm" type="submit">Simpan keputusan</button>`);}
+function saveDecision(ev,id){ev.preventDefault();if(role!=='SDM')return;const a=data.appeals.find(a=>a.id===id);if(!a||a.state!=='OPEN')return;const f=new FormData(ev.target),comment=f.get('comment').trim();if(!comment)return;const state=f.get('decision');if(!['ACCEPTED','REJECTED'].includes(state))return;a.state=state;a.decision=comment;a.history.push({at:new Date().toISOString(),decision:state,comment});const c=data.cards.find(c=>c.id===a.card);if(state==='ACCEPTED'){c.state='REVISION';c.comment='Banding diterima: '+comment;}cardEvent(c,'Keputusan banding',state+' · '+comment);closeModal();render();}
+function reports(){const cards=visibleCards().filter(c=>!reportUnit||c.employeeSnapshot.unit===reportUnit),ready=cards.filter(c=>calculate(c).ready);return header('Laporan dan cadangan data','Rekap penilaian dapat diunduh sebagai CSV atau dicetak ke PDF.',`<button class="btn" onclick="print()">Cetak / PDF</button><button class="btn primary" onclick="exportCSV()">Ekspor CSV</button>`)+`<div class="stats">${stat('Kontrak pada laporan',cards.length,'Sesuai filter unit')}${stat('Data lengkap',ready.length,'Nilai sementara maupun final')}${stat('Penilaian final',cards.filter(c=>c.state==='FINAL').length,'Telah melewati verifikasi')}${stat('Batas kualitas berlaku',cards.filter(c=>calculate(c).qualityGate).length,'Perlu penelaahan penilai','!',true)}</div><section class="card"><div class="toolbar"><select aria-label="Filter unit laporan" onchange="reportUnit=this.value;render()"><option value="">Semua unit</option>${[...new Set(data.cards.map(c=>c.employeeSnapshot.unit))].map(u=>`<option ${reportUnit===u?'selected':''}>${esc(u)}</option>`).join('')}</select><span class="small muted">Nilai kosong tidak dihitung sebagai nol.</span></div>${tableCards(cards)}</section><section class="card no-print"><div class="cardhead"><div><h2>Cadangan dan pemindahan data</h2><div class="muted small">Ekspor JSON mencakup pegawai, kontrak, bukti referensi, banding, dan histori lokal.</div></div></div><div class="actions"><button class="btn" onclick="exportJSON()">Unduh cadangan JSON</button>${role==='SDM'?'<button class="btn" onclick="document.getElementById(\'importFile\').click()">Impor cadangan JSON</button><button class="btn danger" onclick="resetDemo()">Pulihkan data contoh</button>':''}</div><p class="small muted">Impor mengganti seluruh data lokal setelah konfirmasi. Ekspor cadangan terlebih dahulu. Data tidak tersinkron otomatis antarbrowser atau komputer.</p></section>`;}
+function safeCSV(v){let s=String(v??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}
+function download(name,text,type){const blob=new Blob([text],{type}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+function exportJSON(){download('Cadangan_KPI_BKK_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(data,null,2),'application/json');toast('Cadangan JSON disiapkan. Simpan di lokasi yang aman.');}
+function exportCSV(){let rows=[['Kode pegawai','Nama','Unit kontrak','Jabatan kontrak','Periode','Status','Skor hasil','Perilaku','Nilai akhir','Rating','Bobot valid persen','Catatan']];for(const c of visibleCards().filter(c=>!reportUnit||c.employeeSnapshot.unit===reportUnit)){const q=calculate(c),e=employee(c);rows.push([e.code,e.name,c.employeeSnapshot.unit,roleOf(c).name,c.period,STATES[c.state],q.result??'',q.behavior??'',q.final??'',q.rating,q.coverage*100,q.message|| (q.qualityGate?'Batas kualitas berlaku':'')]);}download('Rekap_KPI_BKK.csv','\ufeff'+rows.map(r=>r.map(safeCSV).join(';')).join('\r\n'),'text/csv;charset=utf-8');log('Laporan CSV diekspor',rows.length-1+' kontrak.');}
+function history(){const logs=role==='PEGAWAI'?data.logs.filter(l=>l.detail.includes(data.employees.find(e=>e.id===activeEmployee)?.name||'___')):data.logs;return header('Histori aktivitas','Catatan aktivitas lokal untuk menelusuri proses simulasi.')+`<div class="notice">Histori pada HTML ini dapat diubah melalui penyimpanan browser. Audit trail yang terkendali akan diterapkan di server pada aplikasi PHP 8.</div><section class="card"><div class="timeline">${logs.slice(0,100).map(l=>`<div class="event"><strong>${esc(l.action)}</strong><div>${esc(l.detail)}</div><small>${date(l.at)} · ${esc(l.actor)}</small></div>`).join('')||'<div class="empty">Belum ada aktivitas pada pegawai ini.</div>'}</div><div class="helper">Menampilkan maksimal 100 aktivitas terbaru. Cadangan JSON memuat hingga 3.000 catatan.</div></section>`;}
+function guide(){return header('Panduan penggunaan','Alur uji coba Excel dan HTML sebelum aplikasi lengkap dengan PHP 8.')+`<section class="card"><h2>Mulai dari scorecard contoh</h2><ol><li>Pilih pegawai Contoh Pegawai 01 dan buka Scorecard individu.</li><li>Periksa contoh hasil 96,55, perilaku 106, dan nilai akhir 98,44.</li><li>Dalam peran SDM, sesuaikan target kontrak, realisasi, bobot, bukti, serta nilai perilaku.</li><li>Klik Ajukan verifikasi. Pilih peran Atasan untuk memverifikasi atau meminta revisi.</li><li>Pilih SDM untuk menetapkan penilaian Final. Coba pengajuan banding setelah finalisasi.</li><li>Ekspor CSV untuk rekap; unduh JSON untuk cadangan yang dapat diimpor kembali. Jika sudah mengisi versi HTML sebelumnya, ekspor JSON dari versi lama lalu impor melalui Laporan pada versi ini.</li></ol></section><div class="grid2 equal"><section class="card"><h2>Aturan skoring</h2>${['A','Q','L','Z'].map(t=>`<details><summary>Jenis ${t}</summary><p class="small">${typeGuide(t)}</p></details>`).join('')}<p class="small">Nilai akhir = 80% skor hasil + 20% perilaku. Hasil dinormalisasi dengan bobot valid setelah seluruh status lengkap; bobot valid minimal 70%. Nol penyebut atau data kosong menahan hasil.</p><p class="small">Rating: &lt;75 Perlu perbaikan; 75–&lt;90 Cukup; 90–100 Baik; &gt;100–&lt;103 Sangat baik; ≥103 Istimewa dengan syarat semua mutu mencapai target dan bukti kontribusi.</p><p class="small">Kualitas utama bisnis kurang dari 80 atau kontrol Z gagal membatasi rating insentif maksimal Baik. Nilai hitung tetap ditampilkan.</p></section><section class="card"><h2>Penyimpanan dan pengembangan berikutnya</h2><p class="small">Prototipe HTML bekerja lokal, tanpa akun, server, atau pengiriman pesan. Peran simulasi tidak memberikan perlindungan akses. Gunakan data contoh selama evaluasi alur.</p><p class="small">Data disimpan dalam localStorage. Memindahkan file HTML tidak otomatis membawa data. Gunakan JSON untuk memindahkan data; cadangan mengganti dataset lokal setelah pemeriksaan struktur.</p><p class="small">Bukti dalam prototipe berupa referensi teks, bukan berkas unggahan. Rekap dapat dicetak menjadi PDF melalui menu browser.</p><p class="small">Tahap berikutnya: aplikasi PHP 8 pada cabang rilis dan patch keamanan yang didukung, MySQL, autentikasi dan otorisasi server, penyimpanan bukti, audit trail, serta integrasi modular ke SIMPEG dan MIS.</p></section></div><section class="card"><h2>Cakupan katalog</h2><p class="small">Katalog mengacu pada Kajian KPI Pegawai BKK Jateng Terukur 2026. Enam indikator per jabatan dipertahankan dengan bobot dan formula yang sama pada Excel dan HTML. Contoh target nominal menggunakan rupiah penuh. Target, periode, serta definisi sumber harus disepakati sebelum penilaian aktual.</p><p class="small muted">Versi prototipe ${UI_VERSION} · 30 Oktober 2026. Identitas BKK disajikan sebagai teks dan monogram rancangan; logo resmi belum disertakan.</p></section>`;}
+function modal(title,body,foot){const d=document.getElementById('modal');d.innerHTML=`<div class="dialoghead"><h2>${esc(title)}</h2><button class="close" onclick="closeModal()" aria-label="Tutup dialog">×</button></div><div class="dialogbody">${body}</div><div class="dialogfoot">${foot}</div>`;if(!d.open)d.showModal();}
+function closeModal(){document.getElementById('modal').close();}
+let confirmedAction=null;function confirmDialog(title,text,fn){confirmedAction=fn;modal(title,`<p>${esc(text)}</p>`,`<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" onclick="runConfirm()">Lanjutkan</button>`);}
+function runConfirm(){const f=confirmedAction;confirmedAction=null;closeModal();if(f)f();}
+function resetDemo(){if(role!=='SDM')return;confirmDialog('Pulihkan data contoh','Semua perubahan lokal akan diganti dengan data simulasi awal. Pastikan cadangan JSON sudah diunduh.',()=>{data=starter();activeEmployee=data.employees[0].id;activeCard='';persist();render();toast('Data contoh dipulihkan.');});}
+document.getElementById('roleSelect').addEventListener('change',ev=>{role=ev.target.value;render();});
+document.getElementById('staffSelect').addEventListener('change',ev=>{activeEmployee=ev.target.value;activeCard='';activeMetric=0;render();});
+document.getElementById('importFile').addEventListener('change',async ev=>{const f=ev.target.files[0];if(!f)return;ev.target.value='';if(role!=='SDM')return;if(f.size>15*1024*1024)return toast('Ukuran cadangan maksimal 15 MB.');try{const incoming=validate(JSON.parse(await f.text()));confirmDialog('Impor cadangan',incoming.employees.length+' pegawai dan '+incoming.cards.length+' kontrak akan mengganti data lokal. Lanjutkan setelah membuat cadangan.',()=>{data=incoming;activeEmployee=data.employees[0]?.id||'';activeCard='';log('Cadangan diimpor',f.name);render();toast('Cadangan diimpor.');});}catch(e){toast('Impor ditolak: '+e.message);}});
+window.addEventListener('beforeunload',()=>{persist();});
+const UI_VERSION='1.1.0';
+let activeMetric=0,lastSavedAt=null;
+const ICONS={dashboard:'<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>',scorecard:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 10h6M9 14h6M9 18h4"/>',catalog:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M3 9h18M12 13h5M12 16h5"/>',employees:'<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M17 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 5"/>',verification:'<path d="M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7l-9-4Z"/><path d="m8 12 3 3 5-6"/>',appeals:'<path d="M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4"/>',reports:'<path d="M4 3v18h17M8 16v-5M13 16V7M18 16V4"/>',history:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>',guide:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',user:'<circle cx="12" cy="8" r="3"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>'};
+function icon(name){return `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||ICONS.guide}</svg>`;}
+function drawer(open){const s=document.getElementById('sidebar');s.classList.toggle('open',open);document.getElementById('drawerScrim').classList.toggle('open',open);document.body.classList.toggle('drawer-open',open);s.setAttribute('aria-hidden',String(!open&&window.innerWidth<=760));if(open||window.innerWidth>760)s.removeAttribute('inert');else s.setAttribute('inert','');if(open){s.querySelector('.drawer-close').focus();}else{document.querySelector('.bottomnav button:last-child')?.focus();}}
+function bottomNavigation(){return [['dashboard','Beranda'],['scorecard','Isi KPI'],['catalog','Katalog'],['menu','Lainnya']].map(([key,title])=>`<button class="${view===key?'active':''}" ${view===key?'aria-current="page"':''} onclick="${key==='menu'?'drawer(true)':key==='scorecard'?'openCard()':`nav('${key}')`}" aria-label="${title}"><span class="iconwrap">${icon(key)}</span><span>${title}</span></button>`).join('');}
+function decorateTables(){document.querySelectorAll('.tablewrap table').forEach(t=>{const labels=Array.from(t.querySelectorAll('thead th')).map(x=>x.textContent.trim());if(!labels.length)return;t.querySelectorAll('tbody tr').forEach(tr=>Array.from(tr.children).forEach((td,i)=>td.setAttribute('data-label',labels[i]||'')));});}
+function contextDialog(){modal('Pegawai dan peran aktif',`<div class="fieldgroup"><label for="contextEmployee">Pilih pegawai</label><select id="contextEmployee">${data.employees.map(e=>`<option value="${esc(e.id)}" ${e.id===activeEmployee?'selected':''}>${esc(e.name)} · ${esc(e.code)}</option>`).join('')}</select></div><div class="fieldgroup"><label for="contextRole">Peran simulasi</label><select id="contextRole"><option value="PEGAWAI" ${role==='PEGAWAI'?'selected':''}>Pegawai — isi realisasi</option><option value="ATASAN" ${role==='ATASAN'?'selected':''}>Atasan — verifikasi</option><option value="SDM" ${role==='SDM'?'selected':''}>SDM — kontrak dan finalisasi</option></select></div><p class="helper">Peran digunakan untuk mencoba alur. Prototipe ini belum menggunakan login server.</p>`,`<button class="btn" onclick="closeModal()">Batal</button><button class="btn primary" onclick="applyContext()">Terapkan</button>`);}
+function applyContext(){activeEmployee=document.getElementById('contextEmployee').value;role=document.getElementById('contextRole').value;activeCard='';activeMetric=0;closeModal();render();}
+function syncSavedState(ok){document.querySelectorAll('[data-save-state]').forEach(el=>{el.textContent=ok?'Tersimpan di browser':'Belum tersimpan';el.style.color=ok?'#39796a':'#b9354b';});if(ok)lastSavedAt=new Date();}
+function entryNumber(v,unit){return v===null?'':Number(v).toLocaleString('id-ID',{maximumFractionDigits:2});}
+function parseEntryNumber(raw){let t=String(raw).trim().replace(/\s+/g,'');if(!t)return null;if(!/^-?[\d.,]+$/.test(t))return NaN;if(t.includes(',')){if((t.match(/,/g)||[]).length!==1)return NaN;const [a,b]=t.split(',');if(b.includes('.'))return NaN;t=a.replace(/\./g,'')+'.'+b;}else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)){t=t.replace(/\./g,'');}if(!/^-?(?:\d+\.?\d*|\.\d+)$/.test(t))return NaN;return Number(t);}
+function editLocalizedActual(i,raw){const parsed=parseEntryNumber(raw);editMetric(i,'actual',Number.isFinite(parsed)?String(parsed):'');const error=document.getElementById('actualError'+i),input=document.getElementById('actual'+i),hint=document.getElementById('actualPreview'+i);const invalid=raw.trim()!==''&&!Number.isFinite(parsed);if(error)error.textContent=invalid?'Gunakan angka. Contoh: 1.500.000 atau 98,5.':'';input?.classList.toggle('field-invalid',invalid);input?.setAttribute('aria-invalid',String(invalid));const m=currentCard().metrics[i],d=roleOf(currentCard()).metrics.find(x=>x.id===m.code);if(hint)hint.textContent=Number.isFinite(parsed)?`Terbaca: ${entryNumber(parsed,d.unit)} ${d.unit}`:'Belum ada realisasi.';}
+function formatActualInput(i,input){const m=currentCard()?.metrics[i];if(!m)return;const d=roleOf(currentCard()).metrics.find(x=>x.id===m.code);if(m.actual!==null&&Number.isFinite(m.actual))input.value=entryNumber(m.actual,d.unit);}
+function editLocalizedContract(i,raw){const n=parseEntryNumber(raw);editMetric(i,'target',Number.isFinite(n)?String(n):'');}
+function moveMetric(i){activeMetric=Math.max(0,Math.min(5,i));tab='metrics';render();document.getElementById('entryAnchor')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
+function moveEntry(){const c=currentCard();if(canEdit(c)){const ok=persist();syncSavedState(ok);if(!ok)return;}if(activeMetric<5){moveMetric(activeMetric+1);}else{tab='review';render();document.getElementById('entryAnchor')?.scrollIntoView({behavior:'smooth',block:'start'});}}
+function saveEntry(){if(!persist())return;toast('Draf tersimpan di browser ini.');syncSavedState(true);}
+function setEntryTab(t){tab=t;render();document.getElementById('entryAnchor')?.scrollIntoView({behavior:'smooth',block:'start'});}
+function mobileScoreSummary(q){return `<details class="mobile-summary"><summary><span>Ringkasan nilai <span class="chevron">⌄</span></span><span class="summary-total" id="mobileFinal">${fmt(q.final)}</span></summary><div class="scorepanel"><div><div class="label">Skor hasil · 80%</div><div class="big" id="mobileResult">${fmt(q.result)}</div></div><div><div class="label">Perilaku · 20%</div><div class="big" id="mobileBehavior">${fmt(q.behavior)}</div></div><div><div class="label">Rating efektif</div><div class="big" id="mobileRating">${q.rating}</div></div><div><div class="label">KPI lengkap</div><div class="big" id="mobileProgress">${q.rows.filter(x=>x.state!=='pending').length} / 6</div></div></div><div class="calc-note" id="mobileCalc">${esc(q.message|| (q.qualityGate?'Batas kualitas bisnis berlaku.':'Seluruh syarat penghitungan terpenuhi.'))}</div></details>`;}
+function summaryAside(c,q){const n=q.rows.filter(x=>x.state!=='pending').length;return `<aside class="entry-side"><section class="card"><h3>Ringkasan penilaian</h3><div class="mini-score"><span class="muted">KPI lengkap</span><strong id="sideProgress">${n} / 6</strong></div><div class="track progressline"><div class="bar green" id="sideProgressBar" style="width:${n/6*100}%"></div></div><div class="mini-score"><span class="muted">Skor hasil · 80%</span><strong id="resultScore">${fmt(q.result)}</strong></div><div class="mini-score"><span class="muted">Perilaku · 20%</span><strong id="behaviorScore">${fmt(q.behavior)}</strong></div><div class="mini-score final"><span>Nilai akhir</span><strong id="finalScore">${fmt(q.final)}</strong></div><div id="ratingScore">${ratingBadge(q.rating)}</div><p class="helper" id="calcMessage">${esc(q.message||'Seluruh syarat penghitungan terpenuhi.')}</p><div class="helper" id="weightWarning">Bobot kontrak ${fmt(q.total*100,0)}% · Bobot valid ${fmt(q.coverage*100,0)}%</div></section><section class="card"><h3>Petunjuk singkat</h3><p class="helper">1. Isi realisasi sesuai satuan.<br>2. Cantumkan referensi bukti.<br>3. Pilih status data.<br>4. Periksa sebelum diajukan.</p><button class="btn tiny" onclick="setEntryTab('review')" style="width:100%">Periksa kelengkapan</button></section></aside>`;}
+function reviewEntry(c,q){return `<section class="card"><div class="cardhead"><div><h2>Periksa sebelum diajukan</h2><div class="helper">KPI dan perilaku harus lengkap agar nilai akhir dapat dihitung.</div></div></div><ul class="review-list">${q.rows.map((x,i)=>`<li class="review-item"><span class="status-icon ${x.state==='pending'?'pending':''}">${x.state==='pending'?'!':'✓'}</span><div style="flex:1;min-width:0"><div class="title">${esc(x.def.name)}</div><div class="sub">${x.state==='na'?'Tidak berlaku disetujui':x.state==='valid'?`Realisasi ${entryNumber(x.m.actual,x.def.unit)} ${esc(x.def.unit)} · Skor ${fmt(x.score)}`:esc(x.message)}</div></div><button class="btn tiny" onclick="moveMetric(${i})">${x.state==='pending'?'Lengkapi':'Lihat'}</button></li>`).join('')}<li class="review-item"><span class="status-icon ${q.behavior===null?'pending':''}">${q.behavior===null?'!':'✓'}</span><div style="flex:1"><div class="title">Lima aspek perilaku</div><div class="sub">${q.behavior===null?'Belum lengkap. Diisi penilai SDM pada prototipe.':`Skor perilaku ${fmt(q.behavior)}`}</div></div><button class="btn tiny" onclick="setEntryTab('behavior')">Lihat</button></li></ul>${q.ready?`<div class="notice success" style="margin-top:18px">Data siap diajukan. Nilai akhir <strong>${fmt(q.final)}</strong> · ${q.rating}.</div>`:`<div class="notice" style="margin-top:18px">${esc(q.message)}</div>`}${q.qualityGate?'<div class="notice">Batas kualitas bisnis berlaku. Rating insentif maksimal Baik sampai hasil reviu.</div>':''}<div class="actions scorecard-actions no-print">${canEdit(c)?`<button class="btn primary" onclick="submitCard()" ${q.ready?'':'disabled'}>Ajukan verifikasi</button>`:''}<button class="btn" onclick="print()">Cetak ringkasan</button></div></section><details class="card"><summary>Ketentuan jabatan</summary><p class="helper">${esc(roleOf(c).note)}</p></details>`;}
+function printMetrics(c,q){return `<section class="all-print-metrics" style="display:none"><h2>Rincian KPI</h2><table><thead><tr><th>Indikator</th><th>Target</th><th>Realisasi</th><th>Bobot</th><th>Skor</th></tr></thead><tbody>${q.rows.map(x=>`<tr><td>${esc(x.def.name)}<div>${esc(x.m.evidence)}</div></td><td>${entryNumber(x.m.target,x.def.unit)} ${x.def.unit}</td><td>${entryNumber(x.m.actual,x.def.unit)} ${x.def.unit}</td><td>${fmt(x.m.weight*100,0)}%</td><td>${fmt(x.score)}</td></tr>`).join('')}</tbody></table><p>Skor hasil ${fmt(q.result)} · Perilaku ${fmt(q.behavior)} · Nilai akhir ${fmt(q.final)} · Rating ${q.rating}</p></section>`;}
+
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&document.getElementById('sidebar').classList.contains('open'))drawer(false);});
+document.addEventListener('focusin',ev=>{if(ev.target.matches('input,textarea,select'))document.body.classList.add('keyboard-open');});
+document.addEventListener('focusout',()=>{setTimeout(()=>{if(!document.activeElement?.matches('input,textarea,select'))document.body.classList.remove('keyboard-open');},100);});
+window.addEventListener('resize',()=>{if(window.innerWidth>760){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar').removeAttribute('aria-hidden');document.getElementById('sidebar').removeAttribute('inert');document.getElementById('drawerScrim').classList.remove('open');document.body.classList.remove('drawer-open');}});
+
+render();persist();
+</script></body></html>

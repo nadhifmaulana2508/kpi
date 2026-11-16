@@ -1,0 +1,2321 @@
+openapi: 3.2.1
+info:
+  title: KPI Perbankan API
+  version: 0.1.0-draft
+  summary: Kontrak REST API untuk demo sistem KPI
+  description: |
+    Draft kontrak API untuk frontend SvelteKit dan backend Laravel.
+    Contoh request untuk alur demo tersedia di api_examples.md.
+
+    Semua data bisnis untuk demo bersifat sintetis. Katalog demo adalah
+    placeholder, bukan salinan definisi workbook. Development lokal memakai
+    cookie sesi Laravel dan selector identitas sintetis. MVP demo memakai user
+    dummy; callback SSO merupakan tahap integrasi lanjutan. Data dan objek
+    bertanda demo_only tidak boleh masuk produksi. UAT hanya boleh memakai
+    dataset sintetis pada lingkungan yang terisolasi.
+
+    Browser yang memakai sesi cookie harus mengirim credentials dan Origin
+    dari domain yang diizinkan. Semua request mutasi wajib membawa
+    X-XSRF-TOKEN yang cocok dengan cookie XSRF-TOKEN dari
+    /sanctum/csrf-cookie. Laravel menolak request tanpa CSRF yang sah.
+    Endpoint mutasi MVP mencantumkan parameter CsrfToken. Endpoint mutasi
+    lanjutan mengikuti aturan yang sama. Setiap operasi memiliki extension
+    x-implementation-status: implemented untuk route Laravel yang tersedia,
+    atau planned untuk endpoint tahap berikutnya.
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Laravel API lokal
+tags:
+  - name: Demo session
+  - name: Context
+  - name: Organization
+  - name: KPI catalog
+  - name: Cycles
+  - name: Contracts
+  - name: Reviews
+  - name: Appeals
+  - name: Reports
+  - name: Audit
+security:
+  - laravelSession: []
+x-authentication-by-environment:
+  local: laravelSession
+  uat: laravelSession
+  production: disabled
+paths:
+  /demo/identities:
+    get:
+      x-implementation-status: implemented
+      tags: [Demo session]
+      summary: Ambil daftar identitas demo
+      description: Endpoint local development saja. Tidak tersedia di UAT atau produksi.
+      x-environment: local-only
+      security: []
+      responses:
+        '200':
+          description: Daftar identitas sintetis yang dapat dipilih
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoIdentitiesEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+  /demo/session:
+    post:
+      x-implementation-status: implemented
+      tags: [Demo session]
+      summary: Pilih identitas demo
+      description: |
+        Endpoint local development saja. Endpoint harus ditolak di UAT dan produksi.
+        Server membuat session cookie untuk identitas sintetis yang dipilih.
+      x-environment: local-only
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoSessionRequest'
+      responses:
+        '200':
+          description: Identitas demo aktif
+          headers:
+            Set-Cookie:
+              description: Cookie session lokal dengan atribut HttpOnly dan SameSite.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '419':
+          $ref: '#/components/responses/Error'
+    delete:
+      x-implementation-status: implemented
+      tags: [Demo session]
+      summary: Akhiri identitas demo
+      description: Endpoint local development saja. Endpoint harus ditolak di UAT dan produksi.
+      x-environment: local-only
+      security:
+        - laravelSession: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Session demo dihapus
+        '403':
+          $ref: '#/components/responses/Error'
+        '419':
+          $ref: '#/components/responses/Error'
+  /me:
+    get:
+      x-implementation-status: implemented
+      tags: [Context]
+      summary: Ambil identitas dan cakupan akses aktif
+      responses:
+        '200':
+          description: Identitas aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserEnvelope'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+  /dashboard:
+    get:
+      x-implementation-status: implemented
+      tags: [Context]
+      summary: Ambil ringkasan dashboard sesuai cakupan akses
+      description: Pegawai hanya mendapat hitungan kontrak miliknya. Pimpinan mendapat hitungan kontrak dalam cakupan unitnya; SDM mendapat hitungan lintas unit. Korwil hanya mencakup cabang aktif yang ditetapkan pada penugasan beserta unit di bawah cabang.
+      parameters:
+        - $ref: '#/components/parameters/CycleId'
+      responses:
+        '200':
+          description: Ringkasan dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+  /org-units:
+    get:
+      x-implementation-status: implemented
+      tags: [Organization]
+      summary: Ambil unit organisasi dalam cakupan akses
+      parameters:
+        - name: tree
+          in: query
+          description: True mengembalikan pohon hierarki; false mengembalikan daftar datar.
+          schema:
+            type: boolean
+            default: true
+        - name: type
+          in: query
+          description: Saat tree=true, pilih tipe unit akar dan sertakan turunannya. Saat tree=false, batasi baris ke tipe ini.
+          schema:
+            $ref: '#/components/schemas/OrgUnitType'
+      responses:
+        '200':
+          description: Daftar unit organisasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgUnitsEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Tambah unit organisasi demo
+      description: Hanya SDM demo. Unit yang sudah dipakai tidak dihapus; perubahan struktur dicatat sebagai histori.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrgUnitRequest'
+      responses:
+        '201':
+          description: Unit dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgUnitEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /org-units/{orgUnitId}:
+    parameters:
+      - name: orgUnitId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Ambil detail unit organisasi demo
+      responses:
+        '200':
+          description: Detail unit dalam cakupan akses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgUnitEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Ubah unit organisasi demo
+      description: Hanya SDM demo. Perubahan nama atau relasi berlaku mulai tanggal efektif dan tidak mengubah snapshot kontrak lama.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrgUnitRequest'
+      responses:
+        '200':
+          description: Unit diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgUnitEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /positions:
+    get:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Ambil daftar jabatan demo
+      responses:
+        '200':
+          description: Daftar jabatan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionsEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Tambah jabatan demo
+      description: Hanya SDM demo. Jabatan dibuat aktif; kode jabatan yang sudah terpakai tidak dapat digunakan ulang.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePositionRequest'
+      responses:
+        '201':
+          description: Jabatan dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /positions/{positionId}:
+    parameters:
+      - name: positionId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Ambil detail jabatan demo
+      responses:
+        '200':
+          description: Detail jabatan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Ubah atau nonaktifkan jabatan demo
+      description: Hanya SDM demo. Jabatan yang sudah dipakai penugasan atau kontrak tidak dihapus; perubahan dicatat.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePositionRequest'
+      responses:
+        '200':
+          description: Jabatan diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /employees:
+    get:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Cari pegawai demo dalam cakupan akses
+      parameters:
+        - name: org_unit_id
+          in: query
+          schema:
+            type: string
+        - name: position_id
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Daftar pegawai demo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeesPageEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Tambah pegawai demo
+      description: Hanya SDM demo. Isi hanya nama sintetis dan status kerja; jangan memasukkan PII nyata.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmployeeRequest'
+      responses:
+        '201':
+          description: Pegawai dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /employees/{employeeId}:
+    parameters:
+      - name: employeeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Ambil detail pegawai demo
+      responses:
+        '200':
+          description: Detail pegawai dalam cakupan akses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Ubah data pegawai demo
+      description: Hanya SDM demo. Perubahan dicatat dalam audit event.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmployeeRequest'
+      responses:
+        '200':
+          description: Pegawai diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /employees/{employeeId}/assignments:
+    parameters:
+      - name: employeeId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Ambil riwayat penugasan pegawai demo
+      responses:
+        '200':
+          description: Riwayat penugasan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentsEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Tambah penugasan pegawai demo
+      description: Hanya SDM demo. Penugasan baru tidak mengubah snapshot kontrak yang sudah dibuat.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssignmentRequest'
+      responses:
+        '201':
+          description: Penugasan dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /employees/{employeeId}/assignments/{assignmentId}:
+    parameters:
+      - name: employeeId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      x-implementation-status: planned
+      tags: [Organization]
+      summary: Tutup atau koreksi penugasan demo
+      description: Hanya SDM demo. Penugasan historis tidak dihapus; perubahan dicatat.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssignmentRequest'
+      responses:
+        '200':
+          description: Penugasan diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /kpi-definitions:
+    get:
+      x-implementation-status: implemented
+      tags: [KPI catalog]
+      summary: Ambil katalog KPI
+      parameters:
+        - name: position_id
+          in: query
+          schema:
+            type: string
+        - name: group
+          in: query
+          schema:
+            type: string
+            enum: [Bisnis, Operasional, Pendukung dan Kontrol, Kepemimpinan]
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: draft
+          in: query
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/Page'
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Katalog indikator dengan status draft atau terbit dalam ruang demo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KpiDefinitionsEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      x-implementation-status: planned
+      tags: [KPI catalog]
+      summary: Buat definisi KPI draft
+      description: Hanya SDM demo. Definisi baru berstatus draft dan demo_only=true; kontrak demo dapat memakai versi setelah diterbitkan.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KpiDefinitionDraftRequest'
+      responses:
+        '201':
+          description: Definisi KPI draft dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KpiDefinitionEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /kpi-definitions/{definitionId}:
+    parameters:
+      - name: definitionId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      x-implementation-status: implemented
+      tags: [KPI catalog]
+      summary: Ambil detail definisi KPI dan versinya
+      responses:
+        '200':
+          description: Detail definisi KPI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KpiDefinitionEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      x-implementation-status: planned
+      tags: [KPI catalog]
+      summary: Ubah definisi KPI yang masih draft
+      description: Hanya SDM demo. Versi yang sudah diterbitkan tidak dapat diubah; buat versi baru untuk perubahan berikutnya.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKpiDefinitionDraftRequest'
+      responses:
+        '200':
+          description: Definisi draft diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KpiDefinitionEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /kpi-definitions/{definitionId}/versions:
+    parameters:
+      - name: definitionId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      x-implementation-status: planned
+      tags: [KPI catalog]
+      summary: Buat versi draft dari definisi KPI terbit
+      description: Hanya SDM demo. Versi baru menyalin isi versi terbit terakhir dan menyimpan alasan perubahan.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKpiVersionRequest'
+      responses:
+        '201':
+          description: Versi draft baru dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KpiDefinitionEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /kpi-definitions/{definitionId}/publish:
+    parameters:
+      - name: definitionId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      x-implementation-status: planned
+      tags: [KPI catalog]
+      summary: Terbitkan versi draft KPI
+      description: Hanya SDM demo. Versi terbit tetap tidak berubah. Catatan penerbitan berlaku untuk ruang demo saja, menetapkan demo_only=true, dan bukan persetujuan KPI untuk penggunaan produksi.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishKpiDefinitionRequest'
+      responses:
+        '200':
+          description: Versi KPI diterbitkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KpiDefinitionEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /cycles:
+    get:
+      x-implementation-status: implemented
+      tags: [Cycles]
+      summary: Ambil periode penilaian demo
+      responses:
+        '200':
+          description: Daftar periode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CyclesEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      x-implementation-status: planned
+      tags: [Cycles]
+      summary: Buat siklus penilaian draft
+      description: Hanya SDM demo. Siklus baru selalu berstatus DRAFT dan demo_only=true.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCycleRequest'
+      responses:
+        '201':
+          description: Siklus draft dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /cycles/{cycleId}:
+    parameters:
+      - name: cycleId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      x-implementation-status: planned
+      tags: [Cycles]
+      summary: Ambil detail siklus penilaian
+      responses:
+        '200':
+          description: Detail siklus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      x-implementation-status: planned
+      tags: [Cycles]
+      summary: Ubah pengaturan siklus draft
+      description: Hanya SDM demo. Pengaturan hanya dapat diubah selama DRAFT dan perubahan dicatat.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCycleRequest'
+      responses:
+        '200':
+          description: Siklus draft diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /cycles/{cycleId}/open:
+    post:
+      x-implementation-status: planned
+      tags: [Cycles]
+      summary: Buka siklus untuk pengisian
+      description: Hanya SDM demo. Server memeriksa tanggal dan kesiapan siklus sebelum membuka.
+      x-required-demo-role: SDM
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CycleTransitionRequest'
+      responses:
+        '200':
+          description: Siklus dibuka
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /cycles/{cycleId}/close:
+    post:
+      x-implementation-status: planned
+      tags: [Cycles]
+      summary: Tutup siklus untuk pengisian
+      description: Hanya SDM demo. Alasan penutupan disimpan sebagai audit event.
+      x-required-demo-role: SDM
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CycleTransitionRequest'
+      responses:
+        '200':
+          description: Siklus ditutup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /cycles/{cycleId}/finalize:
+    post:
+      x-implementation-status: planned
+      tags: [Cycles]
+      summary: Finalisasi siklus penilaian
+      description: Hanya SDM demo. Server menolak finalisasi jika masih ada kontrak yang belum final.
+      x-required-demo-role: SDM
+      parameters:
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CycleTransitionRequest'
+      responses:
+        '200':
+          description: Siklus difinalisasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /contracts:
+    get:
+      x-implementation-status: implemented
+      tags: [Contracts]
+      summary: Cari kontrak yang dapat diakses identitas aktif
+      description: Pegawai hanya dapat melihat kontrak miliknya, reviewer hanya kontrak yang ditugaskan kepadanya, dan SDM dapat melihat seluruh kontrak demo. Pimpinan lain melihat ringkasan cakupan melalui dashboard. Filter hanya mempersempit hasil yang sudah diizinkan.
+      parameters:
+        - $ref: '#/components/parameters/CycleId'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContractStatus'
+        - name: org_unit_id
+          in: query
+          description: Mempersempit hasil yang sudah diizinkan ke unit organisasi ini; parameter tidak menambah cakupan akses.
+          schema:
+            type: string
+        - name: employee_id
+          in: query
+          description: Mempersempit hasil yang sudah diizinkan ke pemilik kontrak ini; parameter tidak menambah cakupan akses.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Daftar kontrak dengan pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractsPageEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      x-implementation-status: implemented
+      tags: [Contracts]
+      summary: Buat draf KPI untuk diri sendiri
+      description: Hanya identitas berperan PEGAWAI atau KEPALA_SUB_BIDANG yang dapat membuat kontrak untuk dirinya sendiri. Server mengambil pegawai dan jabatan dari sesi aktif, menerima KPI demo terbit yang sesuai jabatan, lalu menormalisasi bobot katalog menjadi total 1. Siklus harus bulanan dan terbuka; jika cycle_id tidak dikirim, server memilih siklus demo bulanan terbuka. Satu kontrak per pegawai per siklus. Kontrak dibuat berstatus DRAFT tanpa reviewer; pengajuan belum tersedia sampai reviewer routing diterapkan. Deployment produksi harus menolak definisi demo_only.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSelfAssignmentRequest'
+      responses:
+        '201':
+          description: Draf kontrak KPI dibuat untuk identitas aktif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /contracts/{contractId}:
+    parameters:
+      - $ref: '#/components/parameters/ContractId'
+    get:
+      x-implementation-status: implemented
+      tags: [Contracts]
+      summary: Ambil detail kontrak KPI
+      description: Hanya pemilik kontrak, reviewer yang tercatat, dan SDM yang dapat melihat detail. Pimpinan lain hanya menerima hitungan dalam cakupan melalui dashboard.
+      responses:
+        '200':
+          description: Detail kontrak, item, skor, dan status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+  /contracts/{contractId}/items/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/ContractId'
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      x-implementation-status: implemented
+      tags: [Contracts]
+      summary: Ubah target atau realisasi item kontrak
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      description: Pegawai pemilik atau SDM dapat mengubah realisasi, catatan, bukti, dan status item saat DRAFT atau REVISION. Status VALID memerlukan realisasi dan referensi bukti. Reviewer yang tercatat atau SDM dapat mengubah target dan bobot dengan alasan. Total bobot boleh berbeda sementara saat DRAFT atau REVISION, tetapi harus kembali tepat 100% sebelum kontrak diajukan. Hanya SDM dapat menyetujui NOT_APPLICABLE dengan alasan. Setiap perubahan dicatat sebagai audit event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContractItemRequest'
+      responses:
+        '200':
+          description: Item kontrak diperbarui dan skor dihitung ulang server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractItemEnvelope'
+        '401':
+          $ref: '#/components/responses/Error'
+        '419':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /contracts/{contractId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/ContractId'
+    post:
+      x-implementation-status: implemented
+      tags: [Contracts]
+      summary: Tambah komentar atau usulan koreksi kontrak
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      description: Pegawai pemilik, atasan yang ditugaskan, atau SDM dapat menambah komentar selama DRAFT atau REVISION. Komentar tidak dapat diubah atau dihapus dan tampil pada detail kontrak.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContractCommentRequest'
+      responses:
+        '201':
+          description: Komentar dicatat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractCommentEnvelope'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '419':
+          $ref: '#/components/responses/Error'
+  /contracts/{contractId}/behavior:
+    parameters:
+      - $ref: '#/components/parameters/ContractId'
+    put:
+      x-implementation-status: planned
+      tags: [Contracts]
+      summary: Simpan penilaian perilaku demo
+      description: Pada demo, SDM menjadi penilai. Penilai harus tercatat dan berwenang; penetapan penilai produksi masih perlu disahkan. Semua lima aspek dikirim bersama, sementara bukti perilaku menjadi syarat rating tertinggi.
+      x-required-demo-role: SDM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BehaviorEvaluationRequest'
+      responses:
+        '200':
+          description: Penilaian perilaku disimpan dan skor dihitung ulang server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BehaviorEvaluationEnvelope'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+  /contracts/{contractId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/ContractId'
+    post:
+      x-implementation-status: implemented
+      tags: [Contracts]
+      summary: Ajukan kontrak untuk ditinjau
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      description: Pegawai pemilik kontrak atau SDM dapat mengajukan jika item wajib lengkap dan reviewer aktif tersedia. Penilaian perilaku bukan syarat pada MVP.
+      responses:
+        '200':
+          description: Kontrak diajukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractEnvelope'
+        '401':
+          $ref: '#/components/responses/Error'
+        '419':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /contracts/{contractId}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/ContractId'
+    post:
+      x-implementation-status: implemented
+      tags: [Reviews]
+      summary: Verifikasi, minta revisi, atau finalisasi kontrak
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      description: VERIFIED atau REVISION hanya dapat diputuskan atasan/reviewer yang tercatat. FINAL hanya dapat diputuskan SDM. Backend memeriksa kewenangan dan status sebelum menerima tindakan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+      responses:
+        '200':
+          description: Keputusan tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractEnvelope'
+        '401':
+          $ref: '#/components/responses/Error'
+        '419':
+          $ref: '#/components/responses/Error'
+        default:
+          $ref: '#/components/responses/Error'
+  /contracts/{contractId}/appeals:
+    parameters:
+      - $ref: '#/components/parameters/ContractId'
+    post:
+      x-implementation-status: planned
+      tags: [Appeals]
+      summary: Ajukan banding atas kontrak final
+      description: Hanya pegawai pemilik kontrak yang dapat mengajukan banding dalam tenggat siklus.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppealRequest'
+      responses:
+        '201':
+          description: Banding dicatat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+  /appeals/{appealId}/decision:
+    parameters:
+      - name: appealId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      x-implementation-status: planned
+      tags: [Appeals]
+      summary: Terima atau tolak banding dengan alasan
+      description: Hanya SDM berwenang yang dapat memutuskan banding. Keputusan dan alasan disimpan sebagai audit event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppealDecisionRequest'
+      responses:
+        '200':
+          description: Keputusan banding tersimpan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+  /reports/summary:
+    get:
+      x-implementation-status: planned
+      tags: [Reports]
+      summary: Ambil ringkasan hasil sesuai cakupan akses
+      parameters:
+        - $ref: '#/components/parameters/CycleId'
+        - name: org_unit_id
+          in: query
+          schema:
+            type: string
+        - name: group_by
+          in: query
+          schema:
+            type: string
+            enum: [org_unit, position, status]
+      responses:
+        '200':
+          description: Ringkasan laporan demo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportSummaryEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+  /reports/export:
+    get:
+      x-implementation-status: planned
+      tags: [Reports]
+      summary: Ekspor laporan CSV demo
+      parameters:
+        - $ref: '#/components/parameters/CycleId'
+        - name: org_unit_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File CSV untuk data dalam cakupan akses
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Error'
+  /audit-events:
+    get:
+      x-implementation-status: implemented
+      tags: [Audit]
+      summary: Cari riwayat tindakan yang dapat diakses
+      description: SDM dapat melihat seluruh audit demo. Pengguna lain hanya melihat tindakan atas kontrak miliknya atau kontrak yang ditugaskan kepadanya sebagai reviewer. Pimpinan lain hanya menerima hitungan melalui dashboard. Parameter contract_id mengembalikan perubahan kontrak dan item di dalamnya.
+      parameters:
+        - name: contract_id
+          in: query
+          description: Ambil riwayat kontrak dan seluruh itemnya; tetap dibatasi kewenangan pengguna.
+          schema:
+            type: string
+        - name: object_type
+          in: query
+          schema:
+            type: string
+        - name: object_id
+          in: query
+          schema:
+            type: string
+        - name: actor_id
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Riwayat tindakan dengan pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventsPageEnvelope'
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    laravelSession:
+      type: apiKey
+      in: cookie
+      name: laravel-session
+      description: >-
+        Cookie sesi Laravel. Dengan APP_NAME=Laravel, nama default-nya
+        laravel-session. SESSION_COOKIE dapat mengganti nama per lingkungan.
+        Demo lokal memakai selector identitas sintetis. Integrasi IdP dan
+        pemetaan akun uji ke pegawai demo didokumentasikan untuk tahap lanjutan.
+  parameters:
+    CsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: Nilai cookie XSRF-TOKEN setelah URL decoding. Wajib untuk request mutasi yang memakai sesi cookie.
+      schema:
+        type: string
+    CycleId:
+      name: cycle_id
+      in: query
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    ContractId:
+      name: contractId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Error:
+      description: Kesalahan API
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    DemoIdentitiesEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DemoIdentity'
+    DemoIdentity:
+      type: object
+      required: [id, display_name, access_role, org_unit_name, self_assignment_available]
+      properties:
+        id:
+          type: string
+        display_name:
+          type: string
+        access_role:
+          type: string
+        org_unit_name:
+          type: string
+        self_assignment_available:
+          type: boolean
+          description: True jika identitas dapat membuat draf KPI untuk dirinya sendiri pada siklus demo bulanan yang terbuka.
+    DemoSessionRequest:
+      type: object
+      required: [identity_id]
+      properties:
+        identity_id:
+          type: string
+          description: ID identitas sintetis dari daftar demo yang sudah disediakan.
+    CurrentUserEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CurrentUser'
+    CurrentUser:
+      type: object
+      required: [id, employee_id, display_name, access_role, position_name, org_unit_id, org_unit_name, scope_org_unit_ids]
+      properties:
+        id:
+          type: string
+        employee_id:
+          type: string
+        display_name:
+          type: string
+        access_role:
+          type: string
+          enum: [SDM, DIREKSI, KEPALA_DIVISI, KEPALA_BIDANG, KEPALA_SUB_BIDANG, KORWIL, KEPALA_CABANG, PEGAWAI]
+        position_name:
+          type: string
+        org_unit_id:
+          type: string
+        org_unit_name:
+          type: string
+        scope_org_unit_ids:
+          type: array
+          description: Unit yang boleh diringkas oleh identitas aktif. Cakupan Korwil berasal dari cabang aktif yang tercatat pada penugasan.
+          items:
+            type: string
+    DashboardEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [cycle, counts, average_final_score, contracts_needing_action]
+          properties:
+            cycle:
+              $ref: '#/components/schemas/Cycle'
+            counts:
+              type: object
+              required: [total_contracts, ready_contracts, submitted_contracts]
+              properties:
+                total_contracts:
+                  type: integer
+                ready_contracts:
+                  type: integer
+                  description: Jumlah kontrak dalam cakupan dengan skor KPI demo yang dapat dihitung saat ini.
+                submitted_contracts:
+                  type: integer
+            average_final_score:
+              type: [number, 'null']
+              description: Null pada MVP sampai aturan agregasi dan rating disahkan.
+            contracts_needing_action:
+              type: integer
+    OrgUnitsEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgUnit'
+    OrgUnitEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgUnit'
+    CreateOrgUnitRequest:
+      type: object
+      required: [code, name, type, effective_from]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/OrgUnitType'
+        parent_id:
+          type: [string, 'null']
+        effective_from:
+          type: string
+          format: date
+        effective_to:
+          type: [string, 'null']
+          format: date
+    UpdateOrgUnitRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        parent_id:
+          type: [string, 'null']
+        effective_from:
+          type: string
+          format: date
+        effective_to:
+          type: [string, 'null']
+          format: date
+    OrgUnit:
+      type: object
+      required: [id, code, name, type, parent_id, children]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/OrgUnitType'
+        parent_id:
+          type: [string, 'null']
+        effective_from:
+          type: [string, 'null']
+          format: date
+        effective_to:
+          type: [string, 'null']
+          format: date
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgUnit'
+    OrgUnitType:
+      type: string
+      enum: [HEAD_OFFICE, DIVISION, DEPARTMENT, SUB_DEPARTMENT, REGION, BRANCH, SECTION]
+    PositionsEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+    PositionEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Position'
+    Position:
+      type: object
+      required: [id, code, name, group, active]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        group:
+          type: string
+          enum: [Bisnis, Operasional, Pendukung dan Kontrol, Kepemimpinan]
+        active:
+          type: boolean
+    CreatePositionRequest:
+      type: object
+      required: [code, name, group]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        group:
+          type: string
+          enum: [Bisnis, Operasional, Pendukung dan Kontrol, Kepemimpinan]
+    UpdatePositionRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        group:
+          type: string
+          enum: [Bisnis, Operasional, Pendukung dan Kontrol, Kepemimpinan]
+        active:
+          type: boolean
+    EmployeesPageEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Employee'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    EmployeeEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Employee'
+    Employee:
+      type: object
+      required: [id, display_name, employment_status]
+      properties:
+        id:
+          type: string
+        display_name:
+          type: string
+        employment_status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        current_assignment:
+          oneOf:
+            - $ref: '#/components/schemas/Assignment'
+            - type: 'null'
+    CreateEmployeeRequest:
+      type: object
+      required: [display_name, employment_status]
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+        employment_status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+    UpdateEmployeeRequest:
+      type: object
+      minProperties: 1
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+        employment_status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+    AssignmentsEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
+    AssignmentEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Assignment'
+    Assignment:
+      type: object
+      required: [id, position_id, org_unit_id, starts_at]
+      properties:
+        id:
+          type: string
+        position_id:
+          type: string
+        org_unit_id:
+          type: string
+        supervisor_employee_id:
+          type: [string, 'null']
+        starts_at:
+          type: string
+          format: date
+        ends_at:
+          type: [string, 'null']
+          format: date
+    CreateAssignmentRequest:
+      type: object
+      required: [position_id, org_unit_id, starts_at]
+      properties:
+        position_id:
+          type: string
+        org_unit_id:
+          type: string
+        supervisor_employee_id:
+          type: [string, 'null']
+        starts_at:
+          type: string
+          format: date
+    UpdateAssignmentRequest:
+      type: object
+      minProperties: 1
+      properties:
+        supervisor_employee_id:
+          type: [string, 'null']
+        ends_at:
+          type: [string, 'null']
+          format: date
+    KpiDefinitionsEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KpiDefinition'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    KpiDefinitionEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/KpiDefinition'
+    KpiDefinitionDraftRequest:
+      type: object
+      required: [code, name, group, position_id, type, definition, unit, data_source]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        group:
+          type: string
+          enum: [Bisnis, Operasional, Pendukung dan Kontrol, Kepemimpinan]
+        position_id:
+          type: string
+        type:
+          type: string
+          enum: [A, Q, L, Z]
+        definition:
+          type: string
+        unit:
+          type: string
+        default_weight:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+          description: Rasio 0 sampai 1; 0.1667 mewakili sekitar 16.67 persen.
+        sample_target:
+          type: [number, 'null']
+        target_note:
+          type: string
+        data_source:
+          type: string
+        quality_flag:
+          type: boolean
+    UpdateKpiDefinitionDraftRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        group:
+          type: string
+          enum: [Bisnis, Operasional, Pendukung dan Kontrol, Kepemimpinan]
+        position_id:
+          type: string
+        type:
+          type: string
+          enum: [A, Q, L, Z]
+        definition:
+          type: string
+        unit:
+          type: string
+        default_weight:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+          description: Rasio 0 sampai 1; 0.1667 mewakili sekitar 16.67 persen.
+        sample_target:
+          type: [number, 'null']
+        target_note:
+          type: string
+        data_source:
+          type: string
+        quality_flag:
+          type: boolean
+    CreateKpiVersionRequest:
+      type: object
+      required: [change_note]
+      properties:
+        change_note:
+          type: string
+          minLength: 1
+    PublishKpiDefinitionRequest:
+      type: object
+      required: [effective_from, publish_note]
+      properties:
+        effective_from:
+          type: string
+          format: date
+        publish_note:
+          type: string
+          minLength: 1
+    KpiDefinition:
+      type: object
+      required: [id, code, version, name, group, position_id, type, definition, unit, draft, demo_only]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        version:
+          type: integer
+        name:
+          type: string
+        group:
+          type: string
+          enum: [Bisnis, Operasional, Pendukung dan Kontrol, Kepemimpinan]
+        position_id:
+          type: string
+        type:
+          type: string
+          enum: [A, Q, L, Z]
+        definition:
+          type: string
+        unit:
+          type: string
+        default_weight:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+          description: Rasio 0 sampai 1; 0.1667 mewakili sekitar 16.67 persen.
+        sample_target:
+          type: [number, 'null']
+        target_note:
+          type: string
+        data_source:
+          type: string
+        quality_flag:
+          type: boolean
+        draft:
+          type: boolean
+        demo_only:
+          type: boolean
+          description: Jika true, definisi hanya boleh dipakai oleh siklus dan data demo; deployment produksi harus menolaknya.
+        effective_from:
+          type: [string, 'null']
+          format: date
+        effective_to:
+          type: [string, 'null']
+          format: date
+        change_note:
+          type: [string, 'null']
+    CyclesEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cycle'
+    CycleEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Cycle'
+    CreateCycleRequest:
+      type: object
+      required: [name, cadence, starts_at, ends_at, submission_deadline]
+      properties:
+        name:
+          type: string
+        cadence:
+          type: string
+          enum: [WEEKLY, MONTHLY, QUARTERLY, ANNUAL]
+        starts_at:
+          type: string
+          format: date
+        ends_at:
+          type: string
+          format: date
+        submission_deadline:
+          type: string
+          format: date
+        review_deadline:
+          type: [string, 'null']
+          format: date
+        appeal_deadline:
+          type: [string, 'null']
+          format: date
+    UpdateCycleRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        cadence:
+          type: string
+          enum: [WEEKLY, MONTHLY, QUARTERLY, ANNUAL]
+        starts_at:
+          type: string
+          format: date
+        ends_at:
+          type: string
+          format: date
+        submission_deadline:
+          type: string
+          format: date
+        review_deadline:
+          type: [string, 'null']
+          format: date
+        appeal_deadline:
+          type: [string, 'null']
+          format: date
+    CycleTransitionRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+    Cycle:
+      type: object
+      required: [id, name, cadence, formula_version, starts_at, ends_at, status, demo_only]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cadence:
+          type: string
+          enum: [WEEKLY, MONTHLY, QUARTERLY, ANNUAL]
+        formula_version:
+          type: string
+        starts_at:
+          type: string
+          format: date
+        ends_at:
+          type: string
+          format: date
+        submission_deadline:
+          type: [string, 'null']
+          format: date
+        review_deadline:
+          type: [string, 'null']
+          format: date
+        appeal_deadline:
+          type: [string, 'null']
+          format: date
+        status:
+          type: string
+          enum: [DRAFT, OPEN, CLOSED, FINAL]
+        demo_only:
+          type: boolean
+          description: True untuk siklus sintetis; siklus tersebut tidak boleh dipakai di deployment produksi.
+    ContractsPageEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PerformanceContract'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    ContractEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/PerformanceContract'
+    PerformanceContract:
+      type: object
+      required: [id, cycle_id, subject_type, subject_id, employee_name, position_name, org_unit_name, status, reviewer_employee_id, assignment_snapshot, items, behavior_evaluation, comments, score]
+      properties:
+        id:
+          type: string
+        cycle_id:
+          type: string
+        subject_type:
+          type: string
+          enum: [EMPLOYEE, ORG_UNIT]
+        subject_id:
+          type: string
+        employee_name:
+          type: [string, 'null']
+        position_name:
+          type: [string, 'null']
+        org_unit_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/ContractStatus'
+        reviewer_employee_id:
+          type: [string, 'null']
+          description: Reviewer yang disnapshot dari penugasan atau delegasi saat kontrak dibuat.
+        assignment_snapshot:
+          type: [object, 'null']
+          properties:
+            employee_id:
+              type: [string, 'null']
+            position_id:
+              type: [string, 'null']
+            org_unit_id:
+              type: [string, 'null']
+            supervisor_employee_id:
+              type: [string, 'null']
+            reviewer_employee_id:
+              type: [string, 'null']
+            captured_at:
+              type: string
+              format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractItem'
+        behavior_evaluation:
+          type: 'null'
+          description: Null pada MVP; penilaian perilaku belum menjadi bagian alur aktif.
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractComment'
+        score:
+          $ref: '#/components/schemas/ScoreSummary'
+    ContractStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, REVISION, VERIFIED, FINAL]
+    ContractItem:
+      type: object
+      required: [id, kpi_definition_id, code, name, score_type, unit, target, weight, actual, note, evidence, score, state, reason]
+      properties:
+        id:
+          type: string
+        kpi_definition_id:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        score_type:
+          type: string
+          enum: [A, Q, L, Z]
+        unit:
+          type: string
+        target:
+          type: number
+        weight:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+          description: Rasio 0 sampai 1; 0.5 mewakili 50 persen.
+        actual:
+          type: [number, 'null']
+        note:
+          type: string
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceReference'
+        score:
+          type: [number, 'null']
+          description: >-
+            Skor item formula demo, dibulatkan ke tiga desimal. Null jika belum
+            dapat dihitung.
+        state:
+          type: string
+          enum: [PENDING, VALID, NOT_APPLICABLE]
+        reason:
+          type: [string, 'null']
+    EvidenceReference:
+      type: object
+      required: [label, reference]
+      properties:
+        label:
+          type: string
+          maxLength: 120
+        reference:
+          type: string
+          maxLength: 500
+    ContractCommentEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ContractComment'
+    ContractComment:
+      type: object
+      required: [id, actor_employee_id, actor_name, message, created_at]
+      properties:
+        id:
+          type: string
+        actor_employee_id:
+          type: string
+        actor_name:
+          type: string
+        item_id:
+          type: [string, 'null']
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ScoreSummary:
+      type: object
+      required: [kpi_score, behavior_score, final_score, rating, valid_weight, quality_gate, formula_version, demo_only, message]
+      properties:
+        kpi_score:
+          type: [number, 'null']
+          description: >-
+            Skor KPI demo setelah bobot valid dinormalisasi, dibulatkan ke tiga
+            desimal. Null jika bobot atau indikator belum memenuhi syarat.
+        behavior_score:
+          type: [number, 'null']
+          description: Null pada MVP karena penilaian perilaku masuk tahap berikutnya.
+        final_score:
+          type: [number, 'null']
+          description: Null sampai aturan skor gabungan disahkan dan perilaku masuk cakupan.
+        rating:
+          type: [string, 'null']
+          description: Null pada MVP; rating baru tersedia setelah aturan rating disahkan.
+        valid_weight:
+          type: number
+        quality_gate:
+          type: boolean
+        formula_version:
+          type: string
+        demo_only:
+          type: boolean
+        message:
+          type: [string, 'null']
+    BehaviorEvaluationEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/BehaviorEvaluation'
+    BehaviorEvaluation:
+      type: object
+      required: [evaluator_employee_id, aspects, score]
+      properties:
+        evaluator_employee_id:
+          type: string
+        aspects:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/BehaviorAspect'
+        evidence_reference:
+          oneOf:
+            - $ref: '#/components/schemas/EvidenceReference'
+            - type: 'null'
+        comment:
+          type: string
+        score:
+          type: number
+        submitted_at:
+          type: string
+          format: date-time
+    BehaviorAspect:
+      type: object
+      required: [code, rating]
+      properties:
+        code:
+          type: string
+          enum: [INTEGRITY, CUSTOMER_SERVICE, TEAMWORK, WORK_COMPLIANCE, LEARNING_IMPROVEMENT]
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+    BehaviorEvaluationRequest:
+      type: object
+      required: [aspects]
+      properties:
+        aspects:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/BehaviorAspect'
+        evidence_reference:
+          oneOf:
+            - $ref: '#/components/schemas/EvidenceReference'
+            - type: 'null'
+        comment:
+          type: string
+    CreateSelfAssignmentRequest:
+      type: object
+      required: [items]
+      properties:
+        cycle_id:
+          type: string
+          description: ID siklus demo bulanan yang terbuka, opsional. Jika kosong, server memilih siklus demo bulanan terbuka dengan tanggal mulai terbaru.
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [kpi_definition_id, target]
+            properties:
+              kpi_definition_id:
+                type: string
+                description: Definisi KPI demo terbit yang tersedia untuk jabatan pegawai aktif.
+              target:
+                type: number
+                minimum: 0
+                description: Tipe Z harus bernilai 0; tipe lain lebih dari 0; tipe Q dan L maksimal 100.
+    UpdateContractItemRequest:
+      type: object
+      minProperties: 1
+      anyOf:
+        - required: [target]
+        - required: [weight]
+        - required: [actual]
+        - required: [note]
+        - required: [evidence]
+        - required: [state]
+      properties:
+        target:
+          type: number
+        weight:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+        actual:
+          type: [number, 'null']
+        note:
+          type: [string, 'null']
+          maxLength: 2000
+        evidence:
+          type: array
+          maxItems: 10
+          items:
+            allOf:
+              - $ref: '#/components/schemas/EvidenceReference'
+            properties:
+              label:
+                maxLength: 120
+              reference:
+                maxLength: 500
+        state:
+          type: string
+          enum: [PENDING, VALID, NOT_APPLICABLE]
+        reason:
+          type: [string, 'null']
+          maxLength: 2000
+          description: Wajib untuk perubahan target/bobot atau permintaan status NOT_APPLICABLE.
+    CreateContractCommentRequest:
+      type: object
+      required: [message]
+      properties:
+        item_id:
+          type: [string, 'null']
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ContractItemEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ContractItem'
+    ReviewRequest:
+      type: object
+      required: [decision, comment]
+      properties:
+        decision:
+          type: string
+          enum: [VERIFIED, REVISION, FINAL]
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    CreateAppealRequest:
+      type: object
+      required: [reason, evidence]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+        evidence:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/EvidenceReference'
+    AppealDecisionRequest:
+      type: object
+      required: [decision, comment]
+      properties:
+        decision:
+          type: string
+          enum: [ACCEPTED, REJECTED]
+        comment:
+          type: string
+          minLength: 1
+    AppealEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, contract_id, state, reason]
+          properties:
+            id:
+              type: string
+            contract_id:
+              type: string
+            state:
+              type: string
+              enum: [OPEN, ACCEPTED, REJECTED]
+            reason:
+              type: string
+            decision:
+              type: [string, 'null']
+    ReportSummaryEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [cycle_id, total_contracts, completed_contracts, pending_reviews]
+          properties:
+            cycle_id:
+              type: string
+            total_contracts:
+              type: integer
+            completed_contracts:
+              type: integer
+            pending_reviews:
+              type: integer
+            average_final_score:
+              type: [number, 'null']
+            groups:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  total_contracts:
+                    type: integer
+                  average_final_score:
+                    type: [number, 'null']
+    PageMeta:
+      type: object
+      required: [page, per_page, total]
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+    AuditEventsPageEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    AuditEvent:
+      type: object
+      required: [id, actor_id, actor_name, action, object_type, object_id, occurred_at]
+      properties:
+        id:
+          type: string
+        actor_id:
+          type: string
+        actor_name:
+          type: string
+        action:
+          type: string
+        object_type:
+          type: string
+        object_id:
+          type: string
+        reason:
+          type: [string, 'null']
+        occurred_at:
+          type: string
+          format: date-time
+        before:
+          type: [object, 'null']
+          additionalProperties: true
+        after:
+          type: [object, 'null']
+          additionalProperties: true
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
