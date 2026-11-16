@@ -52,6 +52,7 @@ Login pada prototype lokal memakai selector identitas sintetis. [Daftar ID dan p
 
 ## Referensi
 
+- [Panduan setup local dan pindah laptop](docs/SETUP_LOCAL.md)
 - [PRD dan papan progres](PRD_KPI_Perbankan.md)
 - [Kontrak OpenAPI](docs/openapi.yaml)
 - [Contoh request API](docs/api_examples.md)

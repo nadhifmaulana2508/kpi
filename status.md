@@ -1,6 +1,6 @@
 # Status Pengembangan KPI Perbankan
 
-Pembaruan terakhir: 16 November 2026
+Pembaruan terakhir: 17 November 2026
 
 ## Tahap aktif
 
@@ -190,11 +190,14 @@ Design Read: mapping jabatan menjadi kontrak visual antara Admin dan self-assign
 - Layout mobile dibuat bertumpuk dengan jarak dan ukuran tombol yang tetap nyaman disentuh.
 - Warna teks bantuan pada layar masuk diperkuat setelah pengecekan kontras.
 - Pointer, active state, disabled state, dan focus state ditambahkan atau diperjelas pada kontrol yang disentuh di step ini.
+- Panduan setup laptop baru dan checklist pemindahan project ditambahkan di `docs/SETUP_LOCAL.md`, termasuk dependency, SQLite demo, port lokal, verifikasi, dan rencana migrasi MySQL.
 
 ## Berkas yang berubah
 
 - `frontend/src/routes/+page.svelte`
 - `frontend/src/routes/page.css`
+- `docs/SETUP_LOCAL.md`
+- `README.md`
 - `frontend/vite.config.ts`
 - `backend/app/Http/Controllers/Api/V1/DemoIdentityController.php`
 - `status.md`
