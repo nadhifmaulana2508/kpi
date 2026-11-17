@@ -8,12 +8,13 @@ use App\Models\KpiCycle;
 use App\Models\PerformanceContract;
 use App\Services\DemoAccessContext;
 use App\Services\DemoScoreCalculator;
+use App\Services\AccessRoleResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, DemoAccessContext $context, DemoScoreCalculator $scores): JsonResponse
+    public function __invoke(Request $request, DemoAccessContext $context, DemoScoreCalculator $scores, AccessRoleResolver $roles): JsonResponse
     {
         $cycleId = $request->query('cycle_id');
         $cycle = $cycleId
@@ -42,7 +43,7 @@ class DashboardController extends Controller
             ->demoOnly()
             ->where('cycle_id', $cycle->id);
 
-        if ($role === 'SDM') {
+        if ($roles->has($employee, 'SDM', $assignment)) {
             $actionQuery->where('status', 'VERIFIED');
         } else {
             $actionQuery->where('reviewer_employee_id', $employee->id)

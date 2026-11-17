@@ -11,6 +11,10 @@ class CurrentUserController extends Controller
 {
     public function __invoke(Request $request, DemoAccessContext $context): JsonResponse
     {
-        return response()->json(['data' => $context->for($request->user())]);
+        $authSource = $request->session()->has('sso_identity_id') ? 'SSO' : 'DEMO';
+
+        return response()->json([
+            'data' => $context->for($request->user()) + ['auth_source' => $authSource],
+        ]);
     }
 }

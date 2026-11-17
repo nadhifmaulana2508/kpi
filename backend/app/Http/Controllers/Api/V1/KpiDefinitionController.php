@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\KpiDefinition;
+use App\Services\AccessRoleResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class KpiDefinitionController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, AccessRoleResolver $roles): JsonResponse
     {
         $validated = $request->validate([
             'position_id' => ['nullable', 'string', 'exists:positions,id'],
@@ -24,18 +25,19 @@ class KpiDefinitionController extends Controller
         /** @var Employee $employee */
         $employee = $request->user();
         $assignment = $employee->activeAssignment()->with('position')->firstOrFail();
+        $hasAdminAccess = $roles->canManageKpi($employee, $assignment);
         $query = KpiDefinition::query()
             ->where('demo_only', true)
             ->whereHas('position', fn ($builder) => $builder->where('demo_only', true))
             ->with('position');
 
-        if ($assignment->position->access_role !== 'SDM') {
+        if (! $hasAdminAccess) {
             $query->where('position_id', $assignment->position_id)->where('published', true);
         } elseif (! empty($validated['position_id'])) {
             $query->where('position_id', $validated['position_id']);
         }
 
-        if ($assignment->position->access_role === 'SDM' && array_key_exists('draft', $validated)) {
+        if ($hasAdminAccess && array_key_exists('draft', $validated)) {
             $query->where('published', ! (bool) $validated['draft']);
         }
 
@@ -58,7 +60,9 @@ class KpiDefinitionController extends Controller
                 } elseif ($group === 'Bisnis') {
                     $builder->where('name', 'like', '%Pemasaran%');
                 } elseif ($group === 'Operasional') {
-                    $builder->where('name', 'like', '%Operasional%');
+                    $builder->where(fn ($position) => $position
+                        ->where('name', 'like', '%Operasional%')
+                        ->orWhereKey('DEMO-POS-STAF-PUSAT-OPS'));
                 } else {
                     $builder->whereIn('access_role', ['SDM', 'PEGAWAI'])
                         ->whereNotIn('name', ['Staf Pemasaran Demo', 'Staf Operasional Demo']);
@@ -79,7 +83,7 @@ class KpiDefinitionController extends Controller
         ]);
     }
 
-    public function show(Request $request, string $definition): JsonResponse
+    public function show(Request $request, string $definition, AccessRoleResolver $roles): JsonResponse
     {
         $record = KpiDefinition::query()
             ->where('demo_only', true)
@@ -92,7 +96,7 @@ class KpiDefinitionController extends Controller
         $employee = $request->user();
         $assignment = $employee->activeAssignment()->with('position')->firstOrFail();
         abort_unless(
-            $assignment->position->access_role === 'SDM'
+            $roles->canManageKpi($employee, $assignment)
             || $record->position_id === $assignment->position_id,
             403,
             'Definisi KPI berada di luar jabatan demo aktif.',
@@ -108,7 +112,7 @@ class KpiDefinitionController extends Controller
         $group = match (true) {
             in_array($role, ['DIREKSI', 'KEPALA_DIVISI', 'KEPALA_BIDANG', 'KEPALA_SUB_BIDANG', 'KORWIL', 'KEPALA_CABANG'], true) => 'Kepemimpinan',
             str_contains($name, 'Pemasaran') => 'Bisnis',
-            str_contains($name, 'Operasional') => 'Operasional',
+            str_contains($name, 'Operasional') || $definition->position_id === 'DEMO-POS-STAF-PUSAT-OPS' => 'Operasional',
             default => 'Pendukung dan Kontrol',
         };
 

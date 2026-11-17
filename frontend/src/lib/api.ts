@@ -16,13 +16,18 @@ export class ApiError extends Error {
 }
 
 async function prepareCsrf(): Promise<void> {
-	const response = await fetch(apiUrl('/sanctum/csrf-cookie'), {
-		credentials: 'include',
-		headers: { Accept: 'application/json' }
-	});
+	let response: Response;
+	try {
+		response = await fetch(apiUrl('/sanctum/csrf-cookie'), {
+			credentials: 'include',
+			headers: { Accept: 'application/json' }
+		});
+	} catch {
+		throw new ApiError('Server KPI tidak dapat dijangkau. Pastikan backend Laravel sedang berjalan.', 0);
+	}
 
 	if (!response.ok) {
-		throw new ApiError('Token sesi demo tidak dapat disiapkan.', response.status);
+		throw new ApiError(`Sesi aplikasi belum dapat disiapkan (HTTP ${response.status}).`, response.status);
 	}
 }
 
@@ -53,13 +58,18 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 		if (token) headers.set('X-XSRF-TOKEN', token);
 	}
 
-	const response = await fetch(apiUrl(path), {
-		...options,
-		method,
-		headers,
-		credentials: 'include',
-		cache: 'no-store'
-	});
+	let response: Response;
+	try {
+		response = await fetch(apiUrl(path), {
+			...options,
+			method,
+			headers,
+			credentials: 'include',
+			cache: 'no-store'
+		});
+	} catch {
+		throw new ApiError('Server KPI tidak dapat dijangkau. Pastikan backend Laravel sedang berjalan.', 0);
+	}
 	const payload = response.status === 204 ? undefined : await response.json().catch(() => undefined);
 
 	if (!response.ok) {

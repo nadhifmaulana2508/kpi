@@ -4,7 +4,7 @@ Prototype MVP untuk alur penilaian KPI kantor pusat, Korwil, dan cabang. Backend
 
 ## Kebutuhan lokal
 
-- PHP 8.3 atau lebih baru dan Composer
+- PHP 8.4.1 atau lebih baru dan Composer
 - Node.js dan npm
 - SQLite
 
@@ -28,7 +28,7 @@ if (-not (Select-String -Path .env -Pattern '^APP_KEY=.+$' -Quiet)) { & $Php art
 & $Php artisan serve --host=127.0.0.1 --port=8100
 ```
 
-Contoh di atas memakai PHP 8.4 dari Herd. Untuk instalasi lain, arahkan PHP dan Composer ke runtime PHP 8.3 atau lebih baru yang sama.
+Contoh di atas memakai PHP 8.4 dari Herd. Untuk instalasi lain, arahkan PHP dan Composer ke runtime PHP 8.4.1 atau lebih baru yang sama.
 
 `php artisan db:seed` menjalankan `DemoSeeder` dan membangun ulang data berlabel demo. Perintah ini menghapus lalu membuat ulang data demo, jadi gunakan hanya pada database lokal atau UAT yang terisolasi. Jangan jalankan seed demo di produksi.
 
@@ -48,7 +48,7 @@ Buka alamat yang dicetak Vite. Pada workspace ini frontend KPI berjalan di `http
 
 Salin `frontend/.env.example` menjadi `frontend/.env.local` jika perlu mengarahkan browser langsung ke host Laravel terpisah. Isi `VITE_API_BASE_URL` dengan origin API dan tambahkan origin FE yang tepat ke `FRONTEND_ORIGINS` backend. CORS Laravel sudah mengizinkan kredensial untuk allowlist tersebut; sesi Sanctum juga memerlukan `SANCTUM_STATEFUL_DOMAINS` dan `SESSION_DOMAIN` yang cocok. Jika frontend dan API tidak berbagi top-level domain, sepakati mekanisme autentikasi lain sebelum UAT.
 
-Login pada prototype lokal memakai selector identitas sintetis. [Daftar ID dan peran target](docs/demo_seed_plan.md#daftar-user-dummy-untuk-login-demo) mencatat perubahan seed yang masih perlu diterapkan. Integrasi SSO dikerjakan setelah demo ketika TI menyediakan protokol, metadata, domain, claim mapping, dan akun uji.
+Login prototype lokal mendukung dua jalur: akun SSO melalui proxy Laravel dan selector identitas sintetis untuk demo. Login SSO memerlukan konfigurasi server `APP`, `TOKEN_APP`, dan `URL_SSO`, serta mapping `employee_id` eksternal ke pegawai KPI pada tabel `sso_identities`. Rahasia tersebut tidak dimasukkan ke frontend. [Daftar ID dan peran target](docs/demo_seed_plan.md#daftar-user-dummy-untuk-login-demo) mencatat user sintetis untuk mode demo.
 
 ## Referensi
 
@@ -58,4 +58,4 @@ Login pada prototype lokal memakai selector identitas sintetis. [Daftar ID dan p
 - [Contoh request API](docs/api_examples.md)
 - [Rencana seed demo](docs/demo_seed_plan.md)
 
-Panduan ini hanya untuk demo lokal dengan data sintetis. Aturan KPI, mapping reviewer, sumber master data resmi, dan integrasi SSO perlu disahkan sebelum UAT berbasis data/akun nyata.
+Panduan ini hanya untuk demo lokal dengan data sintetis. Endpoint identitas yang ada memakai kredensial akun dan token aplikasi server-side; mekanisme produksi, pemetaan role/SIMPEG, aturan KPI, dan akses data nyata tetap perlu disahkan sebelum UAT.

@@ -7,13 +7,14 @@ use App\Models\AuditEvent;
 use App\Models\ContractItem;
 use App\Models\Employee;
 use App\Models\PerformanceContract;
+use App\Services\AccessRoleResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuditEventController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, AccessRoleResolver $roles): JsonResponse
     {
         $validated = $request->validate([
             'contract_id' => ['nullable', 'string', 'exists:performance_contracts,id'],
@@ -28,7 +29,8 @@ class AuditEventController extends Controller
 
         /** @var Employee $employee */
         $employee = $request->user();
-        $role = $employee->activeAssignment()->with('position')->firstOrFail()->position->access_role;
+        $assignment = $employee->activeAssignment()->with('position')->firstOrFail();
+        $hasAdminAccess = $roles->canManageKpi($employee, $assignment);
         $demoContractIds = PerformanceContract::query()
             ->demoOnly()
             ->select('id');
@@ -49,7 +51,7 @@ class AuditEventController extends Controller
                 ->whereNull('actor_employee_id')
                 ->orWhereHas('actor', fn (Builder $actors) => $actors->where('demo_only', true)));
 
-        if ($role !== 'SDM') {
+        if (! $hasAdminAccess) {
             $contractIds = PerformanceContract::query()
                 ->demoOnly()
                 ->where(fn (Builder $contracts) => $contracts
@@ -74,7 +76,7 @@ class AuditEventController extends Controller
                 ->findOrFail($validated['contract_id']);
 
             abort_unless(
-                $role === 'SDM'
+                $hasAdminAccess
                 || $contract->employee_id === $employee->id
                 || $contract->reviewer_employee_id === $employee->id,
                 403,

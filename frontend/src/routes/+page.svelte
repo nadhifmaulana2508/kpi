@@ -21,8 +21,34 @@
 		id: string;
 		display_name: string;
 		access_role: string;
+		access_roles: string[];
 		org_unit_name: string;
 		self_assignment_available: boolean;
+	};
+	type SsoIdentityMapping = {
+		id: string;
+		external_employee_id: string;
+		employee_id: string;
+		employee_name: string | null;
+		position_name: string | null;
+		access_role: string | null;
+		access_roles: string[];
+		org_unit_name: string | null;
+		active: boolean;
+		updated_at: string | null;
+	};
+	type SsoMappingCandidate = {
+		employee_id: string;
+		display_name: string;
+		position_name: string;
+		access_role: string;
+		access_roles: string[];
+		org_unit_name: string;
+	};
+	type SsoMappingPayload = {
+		issuer: string;
+		mappings: SsoIdentityMapping[];
+		candidates: SsoMappingCandidate[];
 	};
 	type DemoIdentityGroup = {
 		key: string;
@@ -36,10 +62,12 @@
 		employee_id: string;
 		display_name: string;
 		access_role: string;
+		access_roles: string[];
 		position_name: string;
 		org_unit_id: string;
 		org_unit_name: string;
 		scope_org_unit_ids: string[];
+		auth_source?: 'DEMO' | 'SSO';
 	};
 	type Cycle = {
 		id: string;
@@ -468,8 +496,13 @@
 
 	let currentUser = $state<CurrentUser | null>(null);
 	let identities = $state<DemoIdentity[]>([]);
+	let identitiesLoading = $state(true);
+	let identitiesError = $state('');
 	let selectedIdentityId = $state('');
 	let identitySearch = $state('');
+	let loginMode = $state<'SSO' | 'DEMO'>('SSO');
+	let ssoEmployeeId = $state('');
+	let ssoPassword = $state('');
 	let dashboard = $state<Dashboard | null>(null);
 	let cycles = $state<Cycle[]>([]);
 	let kpiDefinitions = $state<KpiDefinition[]>([]);
@@ -487,7 +520,7 @@
 	let busy = $state(false);
 	let errorMessage = $state('');
 	let successMessage = $state('');
-	let view = $state<'overview' | 'mine' | 'reviews' | 'assignment' | 'periods' | 'history' | 'monitoring' | 'catalog' | 'mapping' | 'positions' | 'audit' | 'comparison'>('overview');
+	let view = $state<'overview' | 'mine' | 'reviews' | 'assignment' | 'periods' | 'history' | 'monitoring' | 'catalog' | 'mapping' | 'positions' | 'ssoMappings' | 'audit' | 'comparison'>('overview');
 	let selectedHistoryId = $state('');
 	let reviewTrackFilter = $state<ReviewTrackFilter>('ALL');
 	let reviewStatusFilter = $state<ReviewStatusFilter>('ALL');
@@ -537,6 +570,15 @@
 	let positionFormTargets = $state<Record<string, string>>({});
 	let positionFormWeights = $state<Record<string, string>>({});
 	let positionDeactivateId = $state('');
+	let ssoMappings = $state<SsoIdentityMapping[]>([]);
+	let ssoMappingCandidates = $state<SsoMappingCandidate[]>([]);
+	let ssoMappingIssuer = $state('');
+	let ssoMappingLoading = $state(false);
+	let ssoMappingBusy = $state(false);
+	let ssoMappingExternalId = $state('');
+	let ssoMappingTargetId = $state('');
+	let ssoMappingConfirmed = $state(false);
+	let ssoMappingActionId = $state('');
 	let staffAssignmentStatus = $state<StaffAssignmentStatus>('NONE');
 	let staffAssignmentRecords = $state<Record<string, DemoStaffAssignment>>({});
 	let commentDraft = $state('');
@@ -841,6 +883,19 @@
 			note: 'Belum ada mapping aktif untuk jalur Operasional/Non-bisnis.'
 		},
 		{
+			id: 'POS-STAFF-PUSAT-OPS',
+			name: 'Staf Sistem dan Jaringan TI',
+			level: 'Staf',
+			orgUnitName: 'Divisi Operasional',
+			scopeLabel: 'Sistem, jaringan TI, dan proses operasional pusat',
+			track: 'NON_BUSINESS',
+			status: 'ACTIVE',
+			mappingItemIds: ['DEMO-CATALOG-O-001', 'DEMO-CATALOG-O-002', 'DEMO-CATALOG-O-003'],
+			targets: { 'DEMO-CATALOG-O-001': '30', 'DEMO-CATALOG-O-002': '98', 'DEMO-CATALOG-O-003': '120' },
+			weights: { 'DEMO-CATALOG-O-001': '33.33', 'DEMO-CATALOG-O-002': '33.33', 'DEMO-CATALOG-O-003': '33.34' },
+			note: 'Mapping demo untuk Staf Sistem dan Jaringan TI di Divisi Operasional.'
+		},
+		{
 			id: 'POS-KABID-BUSINESS',
 			name: 'Kepala Bidang Pemasaran',
 			level: 'Supervisor 1',
@@ -882,6 +937,7 @@
 	]);
 
 	const roleNames: Record<string, string> = {
+		ADMIN_KPI: 'Admin KPI',
 		SDM: 'Admin KPI / SDM',
 		DIREKSI: 'Direksi',
 		KEPALA_DIVISI: 'Kepala Divisi',
@@ -1000,23 +1056,16 @@
 
 	const demoIdentityGroups: Omit<DemoIdentityGroup, 'identities'>[] = [
 		{
-			key: 'pusat',
-			label: 'Kantor pusat',
-			description: 'Admin KPI, Direksi, dan satu contoh struktur divisi.',
-			ids: [
-				'DEMO-SDM-001',
-				'DEMO-DIR-001',
-				'DEMO-KADIV-001',
-				'DEMO-KABID-001',
-				'DEMO-KASUBBID-001',
-				'DEMO-STAF-PUSAT-001'
-			]
+			key: 'admin',
+			label: 'Admin KPI',
+			description: 'Pengaturan KPI dan pemantauan demo.',
+			ids: ['DEMO-SDM-001']
 		},
 		{
-			key: 'korwil',
-			label: 'Wilayah contoh',
-			description: 'Satu Korwil untuk melihat alur review wilayah.',
-			ids: ['DEMO-KORWIL-001']
+			key: 'pusat',
+			label: 'Pusat · Divisi Operasional',
+			description: 'Staf Sistem dan Jaringan TI dengan akses self-assignment dan Admin KPI demo.',
+			ids: ['DEMO-STAF-PUSAT-001']
 		},
 		{
 			key: 'cabang',
@@ -1039,6 +1088,7 @@
 							identity.display_name,
 							identity.id,
 							identity.access_role,
+							...identity.access_roles,
 							identity.org_unit_name
 						]
 							.join(' ')
@@ -1053,13 +1103,28 @@
 		return identities.find((identity) => identity.id === selectedIdentityId) ?? null;
 	}
 
+	async function loadDemoIdentities(): Promise<void> {
+		identitiesLoading = true;
+		identitiesError = '';
+		try {
+			const response = await api<Envelope<DemoIdentity[]>>('/api/v1/demo/identities');
+			identities = response.data;
+			if (!identities.some((identity) => identity.id === selectedIdentityId)) selectedIdentityId = '';
+		} catch (error) {
+			identities = [];
+			identitiesError = error instanceof Error ? error.message : 'Daftar user demo belum dapat dimuat.';
+		} finally {
+			identitiesLoading = false;
+		}
+	}
+
 	function visibleContracts(): PerformanceContract[] {
 		if (view === 'assignment') return [];
 		if (view === 'mine') {
 			return contracts.filter((contract) => contract.subject_id === currentUser?.employee_id);
 		}
 		if (view === 'reviews') {
-			if (currentUser?.access_role === 'SDM') {
+			if (hasAccessRole('SDM')) {
 				return contracts.filter((contract) => contract.status === 'VERIFIED');
 			}
 			return contracts.filter(
@@ -1073,6 +1138,24 @@
 
 	function roleName(role: string): string {
 		return roleNames[role] ?? role;
+	}
+
+	function hasAccessRole(accessRole: string): boolean {
+		if (!currentUser) return false;
+		return currentUser.access_roles?.includes(accessRole) ?? currentUser.access_role === accessRole;
+	}
+
+	function hasAdminAccess(): boolean {
+		return hasAccessRole('ADMIN_KPI') || hasAccessRole('SDM');
+	}
+
+	function roleListLabel(primaryRole: string, accessRoles?: string[]): string {
+		const resolvedRoles = accessRoles?.length ? accessRoles : [primaryRole];
+		return [...new Set(resolvedRoles)].map(roleName).join(' + ');
+	}
+
+	function identityRoleLabel(identity: DemoIdentity | null | undefined): string {
+		return identity ? roleListLabel(identity.access_role, identity.access_roles) : '';
 	}
 
 	function canSelfAssignRole(): boolean {
@@ -1445,7 +1528,7 @@
 	}
 
 	function canViewMonitoring(): boolean {
-		return currentUser?.access_role === 'SDM';
+		return hasAdminAccess();
 	}
 
 	function visibleMonitoringRecords(): DemoMonitoringRecord[] {
@@ -1502,7 +1585,7 @@
 	}
 
 	function canViewAuditTrail(): boolean {
-		return currentUser?.access_role === 'SDM';
+		return hasAdminAccess();
 	}
 
 	function dynamicAuditTrailEntries(): DemoAuditTrailEntry[] {
@@ -1632,7 +1715,7 @@
 	}
 
 	function canViewPeriodComparison(): boolean {
-		return currentUser?.access_role === 'SDM';
+		return hasAdminAccess();
 	}
 
 	function comparisonPeriodFor(id: string): DemoPeriod | null {
@@ -1666,7 +1749,7 @@
 	}
 
 	function canManageCatalog(): boolean {
-		return currentUser?.access_role === 'SDM';
+		return hasAdminAccess();
 	}
 
 	function visibleCatalogItems(): DemoCatalogItem[] {
@@ -1888,7 +1971,7 @@
 	}
 
 	function canManageAssignment(): boolean {
-		return currentUser?.access_role === 'SDM';
+		return hasAdminAccess();
 	}
 
 	function openAssignmentMapping(): void {
@@ -1897,7 +1980,7 @@
 	}
 
 	function canManagePositions(): boolean {
-		return currentUser?.access_role === 'SDM';
+		return hasAdminAccess();
 	}
 
 	function openPositions(): void {
@@ -1905,6 +1988,86 @@
 		selectedPositionId = demoPositionMappings[0]?.id ?? '';
 		positionEditorOpen = false;
 		positionDeactivateId = '';
+	}
+
+	function canManageSsoMappings(): boolean {
+		return hasAdminAccess();
+	}
+
+	function openSsoMappings(): void {
+		if (!canManageSsoMappings()) return;
+		setView('ssoMappings');
+		void loadSsoMappings();
+	}
+
+	async function loadSsoMappings(): Promise<void> {
+		ssoMappingLoading = true;
+		errorMessage = '';
+		try {
+			const response = await api<Envelope<SsoMappingPayload>>('/api/v1/sso-identities');
+			ssoMappings = response.data.mappings;
+			ssoMappingCandidates = response.data.candidates;
+			ssoMappingIssuer = response.data.issuer;
+			if (!ssoMappingCandidates.some((candidate) => candidate.employee_id === ssoMappingTargetId)) {
+				ssoMappingTargetId = '';
+			}
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Mapping SSO belum dapat dimuat.';
+		} finally {
+			ssoMappingLoading = false;
+		}
+	}
+
+	function ssoCandidateIsMapped(employeeId: string): boolean {
+		return ssoMappings.some((mapping) => mapping.employee_id === employeeId && mapping.active);
+	}
+
+	async function saveSsoMapping(event: SubmitEvent): Promise<void> {
+		event.preventDefault();
+		if (!ssoMappingExternalId.trim() || !ssoMappingTargetId || !ssoMappingConfirmed) {
+			errorMessage = 'Isi ID pegawai, pilih user KPI yang sesuai, lalu konfirmasi kecocokan identitas.';
+			return;
+		}
+
+		ssoMappingBusy = true;
+		errorMessage = '';
+		successMessage = '';
+		try {
+			const response = await api<Envelope<SsoIdentityMapping>>('/api/v1/sso-identities', {
+				method: 'POST',
+				body: JSON.stringify({
+					external_employee_id: ssoMappingExternalId.trim(),
+					employee_id: ssoMappingTargetId
+				})
+			});
+			ssoMappings = [response.data, ...ssoMappings.filter((mapping) => mapping.id !== response.data.id)];
+			ssoMappingExternalId = '';
+			ssoMappingTargetId = '';
+			ssoMappingConfirmed = false;
+			successMessage = 'Mapping SSO tersimpan. Pegawai dapat mencoba login dengan akun kerja yang sama.';
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Mapping SSO belum dapat disimpan.';
+		} finally {
+			ssoMappingBusy = false;
+		}
+	}
+
+	async function setSsoMappingActive(mapping: SsoIdentityMapping, active: boolean): Promise<void> {
+		ssoMappingActionId = mapping.id;
+		errorMessage = '';
+		successMessage = '';
+		try {
+			const response = await api<Envelope<SsoIdentityMapping>>('/api/v1/sso-identities/' + encodeURIComponent(mapping.id), {
+				method: 'PATCH',
+				body: JSON.stringify({ active })
+			});
+			ssoMappings = ssoMappings.map((item) => item.id === response.data.id ? response.data : item);
+			successMessage = active ? 'Mapping SSO diaktifkan kembali.' : 'Mapping SSO dinonaktifkan.';
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Status mapping SSO belum dapat diubah.';
+		} finally {
+			ssoMappingActionId = '';
+		}
 	}
 
 	function selectedPosition(): DemoPositionMapping {
@@ -2113,6 +2276,9 @@
 
 	function currentStaffPositionMapping(): DemoPositionMapping | null {
 		if (currentUser?.access_role !== 'PEGAWAI') return null;
+		if (currentUser.position_name.toLocaleLowerCase('id-ID').includes('sistem dan jaringan ti')) {
+			return demoPositionMappings.find((position) => position.id === 'POS-STAFF-PUSAT-OPS') ?? null;
+		}
 		const track = staffTrack();
 		if (track === 'BUSINESS') return demoPositionMappings.find((position) => position.id === 'POS-STAFF-BUSINESS') ?? null;
 		if (track === 'NON_BUSINESS') return demoPositionMappings.find((position) => position.id === 'POS-STAFF-NON-BUSINESS') ?? null;
@@ -2418,16 +2584,8 @@
 			await refreshWorkspace();
 		} catch (error) {
 			currentUser = null;
-			try {
-				const response = await api<Envelope<DemoIdentity[]>>('/api/v1/demo/identities');
-				identities = response.data;
-				if (error instanceof ApiError && error.status !== 401) errorMessage = error.message;
-			} catch (identityError) {
-				errorMessage =
-					identityError instanceof Error
-						? identityError.message
-						: 'Data demo belum dapat dimuat dari API.';
-			}
+			if (error instanceof ApiError && error.status !== 401) errorMessage = error.message;
+			await loadDemoIdentities();
 		} finally {
 			loading = false;
 		}
@@ -2631,12 +2789,37 @@
 		}
 	}
 
+	async function loginWithSso(): Promise<void> {
+		if (!ssoEmployeeId.trim() || !ssoPassword) {
+			errorMessage = 'Isi ID pegawai dan password akun kerja Anda.';
+			return;
+		}
+		busy = true;
+		errorMessage = '';
+		successMessage = '';
+		try {
+			const response = await api<Envelope<CurrentUser>>('/api/v1/auth/sso/login', {
+				method: 'POST',
+				body: JSON.stringify({ id_peg: ssoEmployeeId.trim(), password: ssoPassword })
+			});
+			currentUser = response.data;
+			ssoPassword = '';
+			await refreshWorkspace();
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Login SSO belum berhasil.';
+		} finally {
+			busy = false;
+		}
+	}
+
 	async function logout(): Promise<void> {
 		busy = true;
 		errorMessage = '';
 		try {
 			await api('/api/v1/demo/session', { method: 'DELETE' });
 			currentUser = null;
+			ssoEmployeeId = '';
+			ssoPassword = '';
 			dashboard = null;
 			kpiDefinitions = [];
 			selectedDefinitionIds = [];
@@ -2727,7 +2910,7 @@
 		return Boolean(
 			['DRAFT', 'REVISION'].includes(contract.status) &&
 				currentUser &&
-				(contract.subject_id === currentUser.employee_id || currentUser.access_role === 'SDM')
+				(contract.subject_id === currentUser.employee_id || hasAccessRole('SDM'))
 		);
 	}
 
@@ -2735,7 +2918,7 @@
 		return Boolean(
 			['DRAFT', 'REVISION'].includes(contract.status) &&
 				currentUser &&
-				(contract.reviewer_employee_id === currentUser.employee_id || currentUser.access_role === 'SDM')
+				(contract.reviewer_employee_id === currentUser.employee_id || hasAccessRole('SDM'))
 		);
 	}
 
@@ -2855,7 +3038,7 @@
 		}
 	}
 
-	function setView(next: 'overview' | 'mine' | 'reviews' | 'assignment' | 'periods' | 'history' | 'monitoring' | 'catalog' | 'mapping' | 'positions' | 'audit' | 'comparison'): void {
+	function setView(next: 'overview' | 'mine' | 'reviews' | 'assignment' | 'periods' | 'history' | 'monitoring' | 'catalog' | 'mapping' | 'positions' | 'ssoMappings' | 'audit' | 'comparison'): void {
 		view = next;
 		if (next !== 'positions') {
 			positionEditorOpen = false;
@@ -2872,7 +3055,7 @@
 		if (view === 'mine') return 'KPI saya';
 		if (view === 'reviews') {
 			if (canReviewInbox()) return 'Inbox evaluasi';
-			return currentUser?.access_role === 'SDM' ? 'Finalisasi dan tinjauan' : 'Tinjauan kontrak';
+			return hasAccessRole('SDM') ? 'Finalisasi dan tinjauan' : 'Tinjauan kontrak';
 		}
 		if (view === 'assignment') return staffTrack() ? `Susun KPI · ${staffTrackLabel()}` : 'Susun KPI saya';
 		if (view === 'periods') return 'Atur periode';
@@ -2882,6 +3065,7 @@
 		if (view === 'catalog') return 'Katalog KPI dan target';
 		if (view === 'mapping') return 'Penetapan KPI ke jabatan';
 		if (view === 'positions') return 'Master jabatan';
+		if (view === 'ssoMappings') return 'Mapping identitas SSO';
 		if (view === 'history') return 'Riwayat Penilaian';
 		if (view === 'overview' && canViewStaffHistory()) return 'Dashboard saya';
 		return 'Ringkasan kinerja';
@@ -2913,8 +3097,8 @@
 
 				<div class="login-context-copy">
 					<p class="login-step">RUANG KERJA KPI</p>
-					<h1 id="login-title">Mulai dari identitas kerja Anda</h1>
-					<p>Pilih peran untuk melihat batas akses dan alur KPI yang sesuai dengan pekerjaan Anda.</p>
+					<h1 id="login-title">Masuk dengan akun kerja Anda</h1>
+					<p>Profil kerja menentukan jabatan dan akses yang dipakai di ruang KPI.</p>
 				</div>
 
 				<dl class="login-facts">
@@ -2928,10 +3112,27 @@
 
 			<section class="login-card" aria-labelledby="identity-title">
 			<div class="login-copy">
-				<Badge variant="outline" class="demo-badge">Data sintetis</Badge>
-				<h2 id="identity-title">Pilih area dan peran demo</h2>
-				<p>Pilih satu user dari skenario Pusat, Korwil, atau satu cabang contoh.</p>
+				<Badge variant="outline" class="demo-badge">Data KPI sintetis</Badge>
+				<h2 id="identity-title">Masuk ke ruang KPI</h2>
+				<p>Gunakan akun kerja atau pilih identitas demo lokal untuk mencoba peran.</p>
 			</div>
+			<div class="login-mode-switch" role="group" aria-label="Metode masuk">
+				<button type="button" class:active={loginMode === 'SSO'} aria-pressed={loginMode === 'SSO'} onclick={() => { loginMode = 'SSO'; errorMessage = ''; }}>Akun kerja SSO</button>
+				<button type="button" class:active={loginMode === 'DEMO'} aria-pressed={loginMode === 'DEMO'} onclick={() => { loginMode = 'DEMO'; errorMessage = ''; }}>User demo</button>
+			</div>
+			{#if errorMessage}<p class="alert error-alert" role="alert">{errorMessage}</p>{/if}
+			{#if loginMode === 'SSO'}
+				<form class="sso-login-form" onsubmit={(event) => { event.preventDefault(); void loginWithSso(); }}>
+					<label class="field-label" for="sso-employee-id">ID Pegawai</label>
+					<input id="sso-employee-id" class="text-input" bind:value={ssoEmployeeId} autocomplete="username" required />
+					<label class="field-label" for="sso-password">Password</label>
+					<input id="sso-password" class="text-input" type="password" bind:value={ssoPassword} autocomplete="current-password" required />
+					<p class="sso-login-note">Pastikan akun ini sudah dipetakan Admin/SDM ke pegawai KPI. Password dan token diproses backend, bukan disimpan di browser.</p>
+					<Button class="login-button" size="lg" type="submit" disabled={busy || !ssoEmployeeId.trim() || !ssoPassword}>
+						{busy ? 'Memverifikasi akun…' : 'Masuk dengan SSO'}
+					</Button>
+				</form>
+			{:else}
 
 			<label class="field-label" for="identity-search">Cari nama, peran, atau unit</label>
 			<input
@@ -2943,46 +3144,56 @@
 				autocomplete="off"
 			/>
 			<div class="identity-groups" aria-label="Kelompok user dummy">
-				{#each visibleIdentityGroups() as group (group.key)}
-					<section class="identity-group" aria-labelledby={'identity-group-' + group.key}>
-						<div class="identity-group-heading">
-							<h3 id={'identity-group-' + group.key}>{group.label}</h3>
-							<p>{group.description}</p>
-						</div>
-						<div class="identity-list identity-group-list">
-							{#each group.identities as identity (identity.id)}
-					<button
-						type="button"
-						class="identity-option"
-						class:selected={selectedIdentityId === identity.id}
-						aria-pressed={selectedIdentityId === identity.id}
-						onclick={() => (selectedIdentityId = identity.id)}
-					>
-						<span class="identity-avatar">{initials(identity.display_name)}</span>
-						<span class="identity-copy">
-							<strong>{identity.display_name}</strong>
-							<small>{roleName(identity.access_role)} · {identity.org_unit_name}{identity.self_assignment_available ? ' · Bisa susun KPI baru' : ''}</small>
-						</span>
-				</button>
-							{/each}
-						</div>
-					</section>
-					<p class="empty-inline">Tidak ada identitas yang cocok.</p>
-				{/each}
+				{#if identitiesLoading}
+					<p class="empty-inline" role="status">Memuat user demo…</p>
+				{:else if identitiesError}
+					<div class="identity-load-state" role="alert">
+						<p>{identitiesError}</p>
+						<button type="button" class="identity-reload" onclick={() => void loadDemoIdentities()}>Muat ulang daftar</button>
+					</div>
+				{:else if visibleIdentityGroups().length === 0}
+					<p class="empty-inline">Tidak ada user demo yang cocok dengan pencarian.</p>
+				{:else}
+					{#each visibleIdentityGroups() as group (group.key)}
+						<section class="identity-group" aria-labelledby={'identity-group-' + group.key}>
+							<div class="identity-group-heading">
+								<h3 id={'identity-group-' + group.key}>{group.label}</h3>
+								<p>{group.description}</p>
+							</div>
+							<div class="identity-list identity-group-list">
+								{#each group.identities as identity (identity.id)}
+									<button
+										type="button"
+										class="identity-option"
+										class:selected={selectedIdentityId === identity.id}
+										aria-pressed={selectedIdentityId === identity.id}
+										onclick={() => (selectedIdentityId = identity.id)}
+									>
+										<span class="identity-avatar">{initials(identity.display_name)}</span>
+										<span class="identity-copy">
+											<strong>{identity.display_name}</strong>
+										<small>{identityRoleLabel(identity)} · {identity.org_unit_name}{identity.self_assignment_available ? ' · Bisa susun KPI baru' : ''}</small>
+										</span>
+									</button>
+								{/each}
+							</div>
+						</section>
+					{/each}
+				{/if}
 			</div>
 
 			{#if selectedIdentity()}
 				<div class="identity-selection" role="status" aria-live="polite">
 					<span class="selection-label">IDENTITAS DIPILIH</span>
 					<strong>{selectedIdentity()?.display_name}</strong>
-					<span>{roleName(selectedIdentity()?.access_role ?? '')} · {selectedIdentity()?.org_unit_name}</span>
+					<span>{identityRoleLabel(selectedIdentity())} · {selectedIdentity()?.org_unit_name}</span>
 				</div>
 			{/if}
 
-			{#if errorMessage}<p class="alert error-alert" role="alert">{errorMessage}</p>{/if}
 			<Button class="login-button" size="lg" disabled={busy || !selectedIdentityId} onclick={login}>
 				{busy ? 'Menyiapkan sesi…' : 'Masuk ke demo'}
 			</Button>
+			{/if}
 			</section>
 		</div>
 	</main>
@@ -3015,7 +3226,7 @@
 					<span class="nav-symbol" aria-hidden="true">✓</span><span>{canReviewInbox() ? 'Inbox evaluasi' : 'Tinjauan'}</span>
 					{#if dashboard && dashboard.contracts_needing_action > 0}<span class="nav-count">{dashboard.contracts_needing_action}</span>{/if}
 				</button>
-				{#if currentUser?.access_role === 'SDM'}
+				{#if hasAdminAccess()}
 					<button class:active={view === 'monitoring'} aria-current={view === 'monitoring' ? 'page' : undefined} onclick={openMonitoring}>
 						<span class="nav-symbol" aria-hidden="true">◴</span><span>Monitoring</span>
 					</button>
@@ -3034,6 +3245,9 @@
 					<button class:active={view === 'positions'} aria-current={view === 'positions' ? 'page' : undefined} onclick={openPositions}>
 						<span class="nav-symbol" aria-hidden="true">J</span><span>Master jabatan</span>
 					</button>
+					<button class:active={view === 'ssoMappings'} aria-current={view === 'ssoMappings' ? 'page' : undefined} onclick={openSsoMappings}>
+						<span class="nav-symbol" aria-hidden="true">S</span><span>Mapping SSO</span>
+					</button>
 					<button class:active={view === 'periods'} aria-current={view === 'periods' ? 'page' : undefined} onclick={() => setView('periods')}>
 						<span class="nav-symbol" aria-hidden="true">◷</span><span>Periode KPI</span>
 					</button>
@@ -3051,7 +3265,7 @@
 				<div class="breadcrumb">KPI Perbankan <span>/</span> {pageTitle()}</div>
 				<div class="user-menu">
 					<div class="user-avatar">{initials(currentUser.display_name)}</div>
-					<div class="user-details"><strong>{currentUser.display_name}</strong><span>{roleName(currentUser.access_role)}</span></div>
+					<div class="user-details"><strong>{currentUser.display_name}</strong><span>{roleListLabel(currentUser.access_role, currentUser.access_roles)}</span></div>
 					<Button variant="outline" size="sm" disabled={busy} onclick={logout}>Keluar</Button>
 				</div>
 			</header>
@@ -3059,11 +3273,11 @@
 			<main class="page-content">
 				<div class="page-heading">
 					<div>
-						<p class="eyebrow">{view === 'periods' ? 'KONFIGURASI ADMIN' : view === 'mapping' ? 'PENETAPAN KPI' : view === 'positions' ? 'MASTER JABATAN' : view === 'catalog' ? 'KATALOG KPI' : view === 'monitoring' ? 'MONITORING ADMIN' : view === 'audit' ? 'AUDIT TRAIL' : view === 'comparison' ? 'PERBANDINGAN PERIODE' : view === 'history' ? 'RIWAYAT PENILAIAN' : view === 'reviews' && canReviewInbox() ? 'INBOX EVALUASI' : view === 'assignment' ? (activeMonthlyCycle()?.name ?? 'PERIODE AKTIF') : (dashboard?.cycle.name ?? 'DEMO LOKAL')}</p>
+						<p class="eyebrow">{view === 'periods' ? 'KONFIGURASI ADMIN' : view === 'ssoMappings' ? 'AKSES AKUN KERJA' : view === 'mapping' ? 'PENETAPAN KPI' : view === 'positions' ? 'MASTER JABATAN' : view === 'catalog' ? 'KATALOG KPI' : view === 'monitoring' ? 'MONITORING ADMIN' : view === 'audit' ? 'AUDIT TRAIL' : view === 'comparison' ? 'PERBANDINGAN PERIODE' : view === 'history' ? 'RIWAYAT PENILAIAN' : view === 'reviews' && canReviewInbox() ? 'INBOX EVALUASI' : view === 'assignment' ? (activeMonthlyCycle()?.name ?? 'PERIODE AKTIF') : (dashboard?.cycle.name ?? 'DEMO LOKAL')}</p>
 						<h1>{pageTitle()}</h1>
 						<p class="page-subtitle">{currentUser.org_unit_name} · {currentUser.position_name}</p>
 					</div>
-					{#if dashboard?.cycle && view !== 'assignment' && view !== 'periods' && view !== 'history' && view !== 'monitoring' && view !== 'catalog' && view !== 'mapping' && view !== 'positions' && view !== 'audit' && view !== 'comparison'}
+					{#if dashboard?.cycle && view !== 'assignment' && view !== 'periods' && view !== 'history' && view !== 'monitoring' && view !== 'catalog' && view !== 'mapping' && view !== 'positions' && view !== 'ssoMappings' && view !== 'audit' && view !== 'comparison'}
 						<div class="period-pill"><span class="period-dot"></span>{formatDate(dashboard.cycle.starts_at)} – {formatDate(dashboard.cycle.ends_at)}</div>
 					{/if}
 				</div>
@@ -3211,6 +3425,68 @@
 							</aside>
 						</div>
 						<p class="mapping-footnote">Penetapan ini menjadi preview kebijakan per jabatan. Data demo belum memengaruhi self-assignment staf sampai backend dan aturan inheritance dikunci.</p>
+					</section>
+				{/if}
+
+				{#if view === 'ssoMappings' && canManageSsoMappings()}
+					<section class="sso-mapping-panel" aria-labelledby="sso-mapping-title">
+						<div class="sso-mapping-heading">
+							<div>
+								<p class="eyebrow">ADMIN KPI / SDM</p>
+								<h2 id="sso-mapping-title">Hubungkan akun kerja ke user KPI</h2>
+								<p class="muted-copy">Masukkan ID pegawai yang dipakai saat login SSO, lalu pilih identitas demo yang memang sesuai.</p>
+							</div>
+							<Button variant="outline" size="sm" disabled={ssoMappingLoading} onclick={() => void loadSsoMappings()}>Muat ulang</Button>
+						</div>
+
+						<div class="sso-mapping-notice" role="note">
+							<strong>Pasangkan orang yang sama</strong>
+							<p>Jabatan dan unit kerja harus cocok. Hak Admin KPI dicatat sebagai akses tambahan, tanpa mengubah jabatan pegawai. Jika belum ada user demo yang cocok, hentikan mapping dulu.</p>
+						</div>
+
+						{#if ssoMappingLoading}
+							<div class="sso-mapping-empty" role="status">Memuat mapping SSO…</div>
+						{:else}
+							<div class="sso-mapping-layout">
+								<form class="sso-mapping-form" onsubmit={saveSsoMapping}>
+									<div>
+										<p class="eyebrow">TAMBAH MAPPING</p>
+										<h3>Akun SSO baru</h3>
+									</div>
+									<label for="sso-external-employee-id">ID pegawai SSO
+										<input id="sso-external-employee-id" class="text-input" bind:value={ssoMappingExternalId} maxlength="80" autocomplete="off" placeholder="Contoh: 102-121" required />
+									</label>
+									<label for="sso-target-employee">User KPI demo
+										<select id="sso-target-employee" class="text-input" bind:value={ssoMappingTargetId} required>
+											<option value="" disabled>Pilih identitas yang cocok</option>
+											{#each ssoMappingCandidates as candidate (candidate.employee_id)}
+												<option value={candidate.employee_id} disabled={ssoCandidateIsMapped(candidate.employee_id)}>{candidate.display_name} · {roleListLabel(candidate.access_role, candidate.access_roles)} · {candidate.position_name} · {candidate.org_unit_name}{ssoCandidateIsMapped(candidate.employee_id) ? ' (sudah dipasangkan)' : ''}</option>
+											{/each}
+										</select>
+									</label>
+									<label class="sso-mapping-confirm"><input type="checkbox" bind:checked={ssoMappingConfirmed} /><span>Saya sudah memastikan ID SSO dan user KPI ini milik pegawai yang sama dengan jabatan serta unit yang sesuai.</span></label>
+									<Button type="submit" disabled={ssoMappingBusy || !ssoMappingExternalId.trim() || !ssoMappingTargetId || !ssoMappingConfirmed}>{ssoMappingBusy ? 'Menyimpan…' : 'Simpan mapping'}</Button>
+									{#if ssoMappingIssuer}<small class="sso-mapping-issuer">Penerbit: {ssoMappingIssuer}</small>{/if}
+								</form>
+
+								<section class="sso-mapping-list-panel" aria-labelledby="sso-mapping-list-title">
+									<div class="sso-mapping-list-heading"><div><p class="eyebrow">DAFTAR IDENTITAS</p><h3 id="sso-mapping-list-title">Mapping tersimpan</h3></div><span>{ssoMappings.filter((mapping) => mapping.active).length} aktif</span></div>
+									{#if ssoMappings.length === 0}
+										<div class="sso-mapping-empty" role="status"><strong>Belum ada mapping</strong><p>Login SSO belum dapat membuat sesi KPI sampai ID pegawai dipasangkan dengan user KPI demo.</p></div>
+									{:else}
+										<div class="sso-mapping-list">
+											{#each ssoMappings as mapping (mapping.id)}
+												<article class="sso-mapping-row">
+													<div class="sso-mapping-row-main"><span class="sso-mapping-id">{mapping.external_employee_id}</span><strong>{mapping.employee_name ?? mapping.employee_id}</strong><small>{roleListLabel(mapping.access_role ?? '', mapping.access_roles)} · {mapping.position_name ?? 'Penugasan tidak tersedia'} · {mapping.org_unit_name ?? 'Unit tidak tersedia'}</small></div>
+													<div class="sso-mapping-row-actions"><Badge variant={mapping.active ? 'secondary' : 'outline'}>{mapping.active ? 'Aktif' : 'Nonaktif'}</Badge><Button variant="outline" size="sm" disabled={ssoMappingActionId === mapping.id} onclick={() => void setSsoMappingActive(mapping, !mapping.active)}>{ssoMappingActionId === mapping.id ? 'Menyimpan…' : mapping.active ? 'Nonaktifkan' : 'Aktifkan'}</Button></div>
+												</article>
+											{/each}
+										</div>
+									{/if}
+								</section>
+							</div>
+						{/if}
+						<p class="sso-mapping-footnote">Mapping hanya tersedia untuk user demo Admin KPI/SDM. ID SSO disimpan pada backend dan tidak ditampilkan ke user biasa.</p>
 					</section>
 				{/if}
 
@@ -4140,7 +4416,7 @@
 								{#if submitBlockedReason(selectedContract)}<p class="workflow-hint">{submitBlockedReason(selectedContract)}</p>{/if}
 								<div class="workflow-actions">
 									<Button variant="outline" disabled={busy || !commentDraft.trim()} onclick={addComment}>Kirim komentar</Button>
-									{#if selectedContract.subject_id === currentUser.employee_id || currentUser.access_role === 'SDM'}<Button disabled={busy || Boolean(submitBlockedReason(selectedContract))} onclick={submitContract}>Ajukan tinjauan</Button>{/if}
+									{#if selectedContract.subject_id === currentUser.employee_id || hasAccessRole('SDM')}<Button disabled={busy || Boolean(submitBlockedReason(selectedContract))} onclick={submitContract}>Ajukan tinjauan</Button>{/if}
 								</div>
 							</section>
 						{/if}
@@ -4151,7 +4427,7 @@
 								<div class="workflow-actions"><Button variant="outline" disabled={busy || !reviewComment.trim()} onclick={() => reviewContract('REVISION')}>Minta revisi</Button><Button disabled={busy || !reviewComment.trim()} onclick={() => reviewContract('VERIFIED')}>Verifikasi</Button></div>
 							</section>
 						{/if}
-						{#if selectedContract.status === 'VERIFIED' && currentUser.access_role === 'SDM'}
+						{#if selectedContract.status === 'VERIFIED' && hasAccessRole('SDM')}
 							<section class="workflow-box">
 								<label for="final-comment">Catatan finalisasi</label>
 								<textarea id="final-comment" class="text-input textarea-input" bind:value={reviewComment} rows="3" placeholder="Catatan wajib untuk finalisasi"></textarea>
@@ -4165,13 +4441,14 @@
 		</div>
 	</div>
 
-	<nav class="mobile-nav" class:with-assignment={canSelfAssignRole()} class:with-admin={currentUser?.access_role === 'SDM'} class:with-history={canViewStaffHistory()} aria-label="Navigasi ringkas">
+	<nav class="mobile-nav" class:with-assignment={canSelfAssignRole()} class:with-admin={hasAdminAccess()} class:with-history={canViewStaffHistory()} aria-label="Navigasi ringkas">
 		<button class:active={view === 'overview'} aria-current={view === 'overview' ? 'page' : undefined} onclick={() => setView('overview')}><span aria-hidden="true">▦</span><small>{canViewStaffHistory() ? 'Dashboard' : 'Ringkasan'}</small></button>
 		<button class:active={view === 'mine'} aria-current={view === 'mine' ? 'page' : undefined} onclick={() => void openMine()}><span aria-hidden="true">◎</span><small>KPI saya</small></button>
 		{#if canSelfAssignRole()}<button class:active={view === 'assignment'} aria-current={view === 'assignment' ? 'page' : undefined} onclick={() => void openSelfAssignment()}><span aria-hidden="true">+</span><small>Susun KPI</small></button>{/if}
 		{#if canViewStaffHistory()}<button class:active={view === 'history'} aria-current={view === 'history' ? 'page' : undefined} onclick={openHistory}><span aria-hidden="true">▤</span><small>Riwayat</small></button>{/if}
 		<button class:active={view === 'reviews'} aria-current={view === 'reviews' ? 'page' : undefined} onclick={() => (canReviewInbox() ? openReviews() : setView('reviews'))}><span aria-hidden="true">✓</span><small>{canReviewInbox() ? 'Inbox' : 'Tinjauan'}</small></button>
-		{#if currentUser?.access_role === 'SDM'}<button class:active={view === 'monitoring'} aria-current={view === 'monitoring' ? 'page' : undefined} onclick={openMonitoring}><span aria-hidden="true">◴</span><small>Monitor</small></button><button class:active={view === 'catalog'} aria-current={view === 'catalog' ? 'page' : undefined} onclick={openCatalog}><span aria-hidden="true">≡</span><small>Katalog</small></button><button class:active={view === 'mapping'} aria-current={view === 'mapping' ? 'page' : undefined} onclick={openAssignmentMapping}><span aria-hidden="true">↳</span><small>Set KPI</small></button><button class:active={view === 'positions'} aria-current={view === 'positions' ? 'page' : undefined} onclick={openPositions}><span aria-hidden="true">J</span><small>Jabatan</small></button><button class:active={view === 'periods'} aria-current={view === 'periods' ? 'page' : undefined} onclick={() => setView('periods')}><span aria-hidden="true">◷</span><small>Periode</small></button>{/if}
-		{#if currentUser?.access_role === 'SDM'}<button class:active={view === 'audit'} aria-current={view === 'audit' ? 'page' : undefined} onclick={openAuditTrail}><span aria-hidden="true">A</span><small>Audit</small></button><button class:active={view === 'comparison'} aria-current={view === 'comparison' ? 'page' : undefined} onclick={openPeriodComparison}><span aria-hidden="true">%</span><small>Banding</small></button>{/if}
+		{#if hasAdminAccess()}<button class:active={view === 'monitoring'} aria-current={view === 'monitoring' ? 'page' : undefined} onclick={openMonitoring}><span aria-hidden="true">◴</span><small>Monitor</small></button><button class:active={view === 'catalog'} aria-current={view === 'catalog' ? 'page' : undefined} onclick={openCatalog}><span aria-hidden="true">≡</span><small>Katalog</small></button><button class:active={view === 'mapping'} aria-current={view === 'mapping' ? 'page' : undefined} onclick={openAssignmentMapping}><span aria-hidden="true">↳</span><small>Set KPI</small></button><button class:active={view === 'positions'} aria-current={view === 'positions' ? 'page' : undefined} onclick={openPositions}><span aria-hidden="true">J</span><small>Jabatan</small></button><button class:active={view === 'periods'} aria-current={view === 'periods' ? 'page' : undefined} onclick={() => setView('periods')}><span aria-hidden="true">◷</span><small>Periode</small></button>{/if}
+		{#if hasAdminAccess()}<button class:active={view === 'audit'} aria-current={view === 'audit' ? 'page' : undefined} onclick={openAuditTrail}><span aria-hidden="true">A</span><small>Audit</small></button><button class:active={view === 'comparison'} aria-current={view === 'comparison' ? 'page' : undefined} onclick={openPeriodComparison}><span aria-hidden="true">%</span><small>Banding</small></button>{/if}
+		{#if hasAdminAccess()}<button class:active={view === 'ssoMappings'} aria-current={view === 'ssoMappings' ? 'page' : undefined} onclick={openSsoMappings}><span aria-hidden="true">S</span><small>Mapping SSO</small></button>{/if}
 	</nav>
 {/if}

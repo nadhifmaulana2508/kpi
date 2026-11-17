@@ -4,13 +4,13 @@ Pembaruan terakhir: 17 November 2026
 
 ## Tahap aktif
 
-UI/UX step 27, inheritance mapping jabatan Aktif ke self-assignment Staf Cabang.
+Integrasi login SSO untuk prototype KPI, dengan jalur User Demo tetap tersedia.
 
-Status: selesai untuk potongan layar ini.
+Status: Login demo tetap tersedia. Tes browser sebelumnya mengonfirmasi autentikasi SSO berhasil sebelum ditolak karena mapping belum ada. Profil Staf Sistem dan Jaringan TI di Divisi Operasional Pusat kini sudah dipetakan ke kandidat demo yang cocok, dengan role utama Staf/`PEGAWAI`, grant `ADMIN_KPI`, dan mapping KPI Operasional. Akun yang sama bisa mengelola KPI serta melakukan self-assignment; grant Admin tidak memberi kewenangan approve atau finalisasi. Mapping SSO aktif sudah tersimpan di database demo lokal; login browser setelah mapping belum dicoba.
 
 ## Arah desain yang dipakai
 
-Design Read: mapping jabatan menjadi kontrak visual antara Admin dan self-assignment staf, dengan status sumber yang terlihat dan perubahan yang baru berlaku setelah disimpan.
+Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil login demo dan SSO, sementara rahasia aplikasi dan token Bearer tetap di server.
 
 - ENERGY 1: tenang dan fokus pada tugas masuk.
 - RHYTHM 2: panel konteks dan panel pilihan memberi dua tingkat informasi.
@@ -23,8 +23,8 @@ Design Read: mapping jabatan menjadi kontrak visual antara Admin dan self-assign
 - Layar masuk diubah menjadi dua area yang jelas: konteks KPI di kiri dan pemilihan identitas di kanan.
 - Konteks layar menampilkan periode yang diatur Admin, cakupan Pusat/Korwil/satu cabang, serta penanda bahwa data masih sintetis.
 - Setelah identitas dipilih, ringkasan identitas tampil sebelum tombol masuk digunakan.
-- Daftar user dummy dipersempit menjadi satu skenario: enam user Pusat, satu Korwil, dan tiga user Cabang Contoh 001.
-- Identitas dikelompokkan menjadi Kantor Pusat, Wilayah Contoh, dan Cabang Contoh 001 agar role mudah dipilih tanpa daftar organisasi yang terlalu panjang.
+- Daftar user dummy untuk tahap ini berisi Admin KPI/SDM, satu Staf Pusat Divisi Operasional, Kepala Cabang, Staf Pemasaran, dan Staf Operasional pada satu cabang.
+- Identitas dikelompokkan menjadi Admin KPI/SDM, Pusat Divisi Operasional, dan Cabang Contoh 001 agar pilihan demo tetap ringkas.
 - Label `PEGAWAI` di UI disederhanakan menjadi `Staf`; unit Cabang tetap membedakan Pemasaran dan Operasional.
 - Periode 3 bulan tetap menjadi default rancangan sesuai PRD. Opsi 1, 3, 6, dan 12 bulan dicatat sebagai konfigurasi Admin untuk prototipe berikutnya, belum sebagai pengaturan tersimpan.
 - Layar Admin KPI sekarang menyediakan selector cadence 1, 3, 6, dan 12 bulan dengan default 3 bulan.
@@ -191,21 +191,43 @@ Design Read: mapping jabatan menjadi kontrak visual antara Admin dan self-assign
 - Warna teks bantuan pada layar masuk diperkuat setelah pengecekan kontras.
 - Pointer, active state, disabled state, dan focus state ditambahkan atau diperjelas pada kontrol yang disentuh di step ini.
 - Panduan setup laptop baru dan checklist pemindahan project ditambahkan di `docs/SETUP_LOCAL.md`, termasuk dependency, SQLite demo, port lokal, verifikasi, dan rencana migrasi MySQL.
+- Layar login sekarang membuka metode `Akun kerja SSO` secara default dan tetap menyediakan `User demo` untuk mencoba data sintetis.
+- Backend Laravel memanggil `/api/auth/login` memakai `id_peg` dan `password`, lalu `/api/auth/whoami` memakai token Bearer yang hanya hidup selama request server.
+- Header `App` dan `X-App-Token` dibaca dari konfigurasi backend; tidak ada token SSO atau app token yang dikirim ke browser.
+- Login SSO mencari `employee_id` pada mapping `sso_identities` sebelum membuat sesi KPI. Akun yang belum dipetakan mendapat pesan jelas dan tidak memperoleh sesi aplikasi.
+- Admin KPI/SDM memiliki layar `Mapping SSO` untuk memasangkan ID SSO ke user demo dengan jabatan dan unit yang cocok, termasuk Staf Pusat dengan hak Admin KPI tambahan. Mapping dapat dinonaktifkan atau diaktifkan kembali; satu ID SSO dan satu user KPI hanya boleh punya satu pasangan aktif.
+- Endpoint mapping memakai sesi Sanctum dan membatasi akses ke user demo dengan role Admin KPI/SDM. UI meminta konfirmasi bahwa pegawai, jabatan, dan unit cocok; mapping tidak dibuat otomatis.
+- Katalog CA lokal berada di `backend/certs/sso-ca-bundle.pem`; `SSO_CA_BUNDLE` dapat dipakai untuk override lokasi tanpa mengubah `TOKEN_APP` atau mengirim token ke frontend.
+- Respons login demo dan SSO memakai struktur CurrentUser yang sama serta penanda `auth_source`.
+- `job_position` diperlakukan sebagai nama jabatan; `level` sebagai tingkat hirarki. Akses aplikasi mengikuti penugasan pegawai KPI yang terpetakan, bukan tebakan dari teks bebas.
+- API SSO belum diuji dengan kredensial live. Kredensial tidak diminta atau disimpan di chat; pengujian dapat dilakukan lewat form lokal setelah mapping identitas tersedia.
 
 ## Berkas yang berubah
 
 - `frontend/src/routes/+page.svelte`
 - `frontend/src/routes/page.css`
-- `docs/SETUP_LOCAL.md`
-- `README.md`
 - `frontend/vite.config.ts`
+- `backend/app/Http/Controllers/Api/V1/SsoLoginController.php`
+- `backend/app/Http/Controllers/Api/V1/CurrentUserController.php`
 - `backend/app/Http/Controllers/Api/V1/DemoIdentityController.php`
+- `backend/routes/api.php`
+- `backend/config/services.php`
+- `backend/.env.example`
+- `README.md`
+- `docs/SETUP_LOCAL.md`
 - `status.md`
 
 ## Verifikasi
 
 - `npm.cmd run check`: lulus.
 - `npm.cmd run build`: lulus.
+- `npm.cmd run check`: lulus setelah form SSO dan pilihan login demo ditambahkan, tanpa error atau warning Svelte.
+- `npm.cmd run build`: lulus setelah login SSO dan proxy identitas ditambahkan.
+- PHP lint: lulus untuk controller SSO, controller user, controller demo, route API, dan konfigurasi service.
+- Laravel Pint: lulus pada file PHP yang berubah.
+- `php artisan route:list --path=api/v1/auth`: route `POST api/v1/auth/sso/login` terdaftar.
+- Frontend lokal merespons `200` di `http://127.0.0.1:5180` setelah form SSO ditambahkan.
+- Uji kredensial live belum dilakukan. Akun SSO harus terlebih dahulu dipetakan ke pegawai KPI melalui tabel `sso_identities`; belum ada mapping SSO yang disertakan oleh seed demo.
 - `npm.cmd run check`: lulus setelah Inbox evaluasi ditambahkan, tanpa error atau warning Svelte.
 - `npm.cmd run build`: lulus setelah Inbox evaluasi ditambahkan.
 - `npm.cmd run check`: lulus setelah detail review dan keputusan ditambahkan, tanpa error atau warning Svelte.
@@ -295,14 +317,92 @@ Masalah login berasal dari port API yang tertukar dengan project lain. Frontend 
 
 Sesi dummy sudah diverifikasi melalui alur CSRF dan `POST /api/v1/demo/session` dengan respons `200` untuk `DEMO-KASUBBID-001`.
 
-## Rekomendasi step berikutnya
+## Perbaikan login SSO dan user demo — 17 November 2026
 
-Bangun preview dampak perubahan mapping KPI per jabatan. Fokus: Admin dapat melihat indikator yang bertambah/berkurang dan perubahan target/bobot sebelum mapping dipakai self-assignment.
+- Penyebab pesan `Token sesi demo tidak dapat disiapkan` adalah backend Laravel tidak aktif di port proxy 8100. Backend Herd kini aktif di `http://127.0.0.1:8100`; frontend tetap di `http://127.0.0.1:5180`.
+- Pesan CSRF di frontend dibuat berlaku untuk kedua metode login dan kini menjelaskan bila backend KPI tidak dapat dijangkau.
+- Pemilih user demo menampilkan state memuat, gagal memuat dengan tombol coba lagi, dan hasil pencarian kosong yang terpisah.
+- Pada langkah awal, user demo dibatasi ke empat identitas: Admin KPI/SDM, Kepala Cabang, Staf Pemasaran, dan Staf Operasional pada Cabang Demo 001.
+- API demo menolak login ke identitas demo lain yang tidak termasuk skenario tahap ini. Label Admin KPI juga konsisten sebelum dan setelah login.
+- Berkas yang berubah: `frontend/src/lib/api.ts`, `frontend/src/routes/+page.svelte`, `frontend/src/routes/page.css`, `backend/app/Http/Controllers/Api/V1/DemoIdentityController.php`, `backend/app/Http/Controllers/Api/V1/SsoLoginController.php`, `backend/app/Services/DemoAccessContext.php`, `backend/database/seeders/DemoSeeder.php`, dan `status.md`.
+
+### Verifikasi
+
+- `npm.cmd run check`: lulus, tanpa error atau warning Svelte.
+- `npm.cmd run build`: lulus setelah state pemilih Admin dan cabang ditambahkan.
+- PHP lint lulus untuk controller identitas demo dan SSO, service konteks demo, dan seeder.
+- Laravel Pint `--test` lulus untuk `SsoLoginController` setelah pesan kegagalan TLS diperjelas.
+- `GET /sanctum/csrf-cookie` melalui proxy frontend: `204`.
+- `GET /api/v1/demo/identities` melalui proxy frontend: `200`, tepat empat user sesuai skenario.
+- Login dummy Admin KPI, Kepala Cabang, Staf Pemasaran, dan Staf Operasional melalui alur CSRF dan proxy: `200`.
+- Login SSO dicoba dari browser, tetapi backend berhenti pada verifikasi TLS sebelum provider memberi respons autentikasi. Probe diagnostik tidak mengirim password atau token ke provider.
+- Sesi KPI hanya dibuat setelah `employee_id` dari SSO dipetakan pada `sso_identities`; layar pengelolaan mapping belum dibuat.
+
+### Langkah berikutnya
+
+Muat ulang backend KPI melalui Herd agar perubahan CA bundle dan controller terbaru dipakai. Login sebagai Admin lewat `User demo`, buka `Mapping SSO`, lalu pasangkan ID dari akun kerja hanya ke user demo dengan jabatan dan unit yang sama. Setelah mapping tersimpan, coba login SSO kembali. Jangan petakan akun Staf Pusat ke Admin atau user Cabang.
+
+Token aplikasi SSO sempat terlihat di screenshot. Rotasi token pada layanan SSO dan perbarui `TOKEN_APP` di `backend/.env` sebelum digunakan lebih lanjut.
+
+## Diagnostik SSO — 17 November 2026
+
+- Browser sudah menerima `204` dari endpoint CSRF dan request login mencapai Laravel. Respons `503` sekitar 11 detik berasal dari koneksi keluar Laravel ke SSO.
+- PHP Herd memakai `curl.cainfo` dan `openssl.cafile` pada `C:\Users\user\.config\herd\config\php\cacert.pem`, tetapi PHP melaporkan berkas itu tidak ada.
+- Dengan CA bundle Git for Windows, validasi tetap gagal dengan `unable to get local issuer certificate`. Pemeriksaan sertifikat host menemukan satu sertifikat leaf `*.bkkjateng.co.id` berissuer Let's Encrypt `YR1`, tanpa rantai perantara yang dikirim server.
+- GET tanpa kredensial ke `/api/auth/whoami` menjangkau host dan menerima `401` saat verifikasi TLS dilewati khusus untuk diagnosis. Password dan app token tidak dikirim pada probe ini; jangan gunakan TLS yang dilewati sebagai konfigurasi aplikasi.
+- Header `App` dan `X-App-Token` tetap dibaca dari `APP` dan `TOKEN_APP` di config Laravel. Penyebab `503` terjadi pada TLS sebelum server memberi respons HTTP autentikasi.
+- Let's Encrypt mencatat rantai default YR1 melalui `Root YR` yang disilang ke `ISRG Root X1`, dan memperingatkan root YR belum ada di sebagian besar trust store. Server perlu menyajikan rantai yang kompatibel penuh. [Dokumentasi rantai sertifikat Let's Encrypt](https://letsencrypt.org/certificates/)
+- `SsoLoginController` sekarang membedakan error verifikasi sertifikat dari gangguan koneksi biasa, tanpa menampilkan detail internal atau rahasia ke browser.
+
+## Tindak lanjut SSO — 17 November 2026
+
+- CA bundle project ditambahkan di `backend/certs/sso-ca-bundle.pem` dan dipakai pada request login serta whoami lewat opsi `verify`; verifikasi sertifikat tetap menyala.
+- Tes HTTPS langsung dari PHP dengan bundle project dan tanpa header/kredensial menghasilkan HTTP `401` dari `/api/auth/whoami`, bukan error TLS. Respons `401` di sini diharapkan karena probe tidak membawa Bearer token.
+- API mapping Admin/SDM ditambahkan: baca mapping dan kandidat demo, buat mapping, serta aktif/nonaktifkan mapping. Data dibatasi ke Admin KPI/SDM, Kepala Cabang, Staf Pemasaran, dan Staf Operasional demo.
+- UI `Mapping SSO` meminta ID pegawai SSO, user KPI tujuan, dan konfirmasi kecocokan jabatan/unit. Tidak ada mapping yang diisi otomatis.
+- `npm.cmd run check`: lulus, tanpa error atau warning Svelte. `npm.cmd run build`: lulus.
+- PHP syntax check lulus untuk controller, route, dan konfigurasi terkait. Pemeriksaan Laravel Artisan dari sesi tool ini tertahan karena PHP CLI yang tersedia adalah XAMPP 8.2, sedangkan dependency backend meminta PHP minimal 8.4.1; backend Herd pengguna belum bisa diuji langsung dari sesi ini.
+- Login SSO end-to-end belum dinyatakan berhasil: perlu restart/reload Herd, mapping yang sesuai, dan percobaan lokal dengan kredensial pengguna.
+- Jangan kirim password ke chat. Token aplikasi yang sempat terlihat di screenshot tetap perlu dirotasi setelah uji lokal selesai.
+
+## Hasil uji browser SSO — 17 November 2026
+
+- Request CSRF merespons `204`; submit login SSO merespons `403` dengan `SSO_IDENTITY_UNMAPPED`.
+- Pesan backend menyatakan login SSO berhasil sebelum aplikasi menolak karena belum ada mapping. Ini mengonfirmasi koneksi HTTPS dan autentikasi provider berhasil; sesi KPI belum terbentuk.
+- Pada hasil uji itu, user SSO yang sedang dicoba adalah Staf Pusat dan kandidat demo Pusat belum tersedia.
+- Langkah yang sesuai dengan cakupan demo saat ini: uji dengan profil Kepala Cabang yang cocok dengan `DEMO-KACAB-001`, atau tambahkan satu kandidat demo Pusat yang sesuai sebelum memetakan akun Staf Pusat.
+
+## Dual role Staf Pusat + Admin KPI — 17 November 2026
+
+- Identitas demo Staf Sistem dan Jaringan TI sekarang memiliki jabatan utama `PEGAWAI`, unit `Divisi Operasional`, dan indikator KPI demo untuk self-assignment.
+- Hak Admin KPI ditambahkan sebagai grant terpisah `ADMIN_KPI`. Grant tidak mengubah jabatan, unit, atau akses self-assignment pegawai, dan tidak memberi kewenangan reviewer.
+- User demo Admin juga memakai role `ADMIN_KPI`; menu Admin tidak lagi bergantung pada role reviewer `SDM`.
+- Pemilih User demo menampilkan identitas Staf Pusat bersama role tambahannya. Hak akses Admin KPI dan layar staf membaca dua role dari kontrak `CurrentUser`.
+- Mapping jabatan khusus Pusat memakai indikator Operasional demo. Mapping Staf Operasional Cabang tetap kosong agar empty state Step 27 tetap tersedia.
+- Kandidat Staf Pusat tersedia pada menu Mapping SSO. ID pegawai SSO tidak ditulis ke source code atau status; Admin memasangkannya secara lokal setelah memastikan jabatan dan unit cocok.
+- Migration `employee_role_grants` dan `DemoRoleGrantSeeder` menyiapkan grant, posisi, serta KPI khusus tanpa menjalankan seed penuh dan memperbarui role Admin demo yang lama.
+- Instruksi update database demo tanpa menghapus kontrak ditambahkan di `docs/SETUP_LOCAL.md`.
+- Prasyarat PHP di README dan panduan pindah laptop disamakan ke PHP 8.4.1 atau lebih baru.
+
+### Berkas yang berubah
+
+- `backend/app/Services/AccessRoleResolver.php`, `backend/app/Services/DemoAccessContext.php`, `backend/app/Models/EmployeeRoleGrant.php`, dan `backend/app/Models/Employee.php`
+- `backend/database/migrations/2026_11_17_000001_create_employee_role_grants_table.php` dan `backend/database/seeders/DemoRoleGrantSeeder.php`
+- `backend/database/seeders/DemoSeeder.php` dan controller API yang memeriksa role Admin KPI
+- `frontend/src/routes/+page.svelte`, `README.md`, `docs/SETUP_LOCAL.md`, dan `status.md`
+
+### Verifikasi
+
+- `npm.cmd run check`: lulus, 0 error dan 0 warning.
+- `npm.cmd run build`: lulus.
+- `php -n -l`: syntax check lulus untuk model, migration, seeder, service, dan controller yang berubah.
+- `git diff --check`: lulus.
+- Migration `employee_role_grants` berhasil dijalankan dengan PHP Herd 8.4.27; `DemoRoleGrantSeeder` selesai tanpa menjalankan seed penuh.
+- `GET /api/v1/demo/identities` melalui frontend merespons `200` dengan lima user. Profil Staf Pusat mengembalikan `PEGAWAI` + `ADMIN_KPI`, unit `Divisi Operasional`, dan `self_assignment_available: true`.
+- Admin demo membuat mapping SSO aktif ke kandidat Staf Sistem dan Jaringan TI. Nilai ID SSO tidak disalin ke source code atau status.
+- Resolver issuer pada login dan pembuatan mapping memakai nilai konfigurasi yang sama; jika `SSO_ISSUER` kosong, keduanya memakai URL SSO yang dinormalisasi tanpa garis miring penutup.
+- Frontend dan backend `/up` merespons `200`. Login SSO setelah mapping belum dicoba di browser karena kredensial tetap dimasukkan lokal oleh pengguna.
 
 ## Prompt lanjutan
 
-Lanjutkan UI/UX step 28 dari PRD.md: buat preview dampak perubahan mapping KPI per jabatan untuk Admin KPI/SDM. Tampilkan jabatan terdampak, indikator yang ditambah/dihapus, perubahan target/bobot, dan warning bila periode sudah OPEN. Frontend-only, tanpa backend baru, fokus prototipe responsif, lalu update status.md.
-
-## Urutan setelah step berikutnya
-
-1. Preview dampak perubahan mapping KPI per jabatan.
+Login lewat `Akun kerja SSO` secara lokal, tanpa membagikan password atau token. Pastikan profil menampilkan jabatan Staf di Divisi Operasional sekaligus akses Admin KPI, lalu cek apakah indikator Operasional pusat bisa dipilih untuk self-assignment. Pastikan grant Admin KPI tidak menampilkan aksi approve/finalisasi. Catat hasil login di `status.md`; setelah akses ganda terkonfirmasi, lanjutkan Step 28: preview dampak perubahan mapping KPI per jabatan.

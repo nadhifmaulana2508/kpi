@@ -10,6 +10,7 @@ use App\Models\KpiCycle;
 use App\Models\KpiDefinition;
 use App\Models\PerformanceContract;
 use App\Services\DemoScoreCalculator;
+use App\Services\AccessRoleResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -160,7 +161,7 @@ class ContractController extends Controller
         return response()->json(['data' => $this->serialize($contract, $scores)], 201);
     }
 
-    public function index(Request $request, DemoScoreCalculator $scores): JsonResponse
+    public function index(Request $request, DemoScoreCalculator $scores, AccessRoleResolver $roles): JsonResponse
     {
         $validated = $request->validate([
             'cycle_id' => ['nullable', 'string', 'exists:cycles,id'],
@@ -173,13 +174,14 @@ class ContractController extends Controller
 
         /** @var Employee $employee */
         $employee = $request->user();
-        $role = $employee->activeAssignment()->with('position')->firstOrFail()->position->access_role;
+        $assignment = $employee->activeAssignment()->with('position')->firstOrFail();
+        $hasAdminAccess = $roles->canManageKpi($employee, $assignment);
 
         $query = PerformanceContract::query()
             ->demoOnly()
             ->with(['employee', 'position', 'orgUnit', 'reviewer', 'items', 'comments.actor']);
 
-        if ($role !== 'SDM') {
+        if (! $hasAdminAccess) {
             $query->where(fn (Builder $visible) => $visible
                 ->where('employee_id', $employee->id)
                 ->orWhere('reviewer_employee_id', $employee->id));
@@ -214,7 +216,7 @@ class ContractController extends Controller
         ]);
     }
 
-    public function show(Request $request, string $contract, DemoScoreCalculator $scores): JsonResponse
+    public function show(Request $request, string $contract, DemoScoreCalculator $scores, AccessRoleResolver $roles): JsonResponse
     {
         $record = PerformanceContract::query()
             ->demoOnly()
@@ -223,9 +225,9 @@ class ContractController extends Controller
 
         /** @var Employee $employee */
         $employee = $request->user();
-        $role = $employee->activeAssignment()->with('position')->firstOrFail()->position->access_role;
+        $assignment = $employee->activeAssignment()->with('position')->firstOrFail();
         abort_unless(
-            $role === 'SDM'
+            $roles->canManageKpi($employee, $assignment)
             || $record->employee_id === $employee->id
             || $record->reviewer_employee_id === $employee->id,
             403,

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\KpiCycle;
 use App\Models\PerformanceContract;
+use App\Services\AccessRoleResolver;
 use App\Services\DemoAccessContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 
 class DemoIdentityController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(AccessRoleResolver $roles): JsonResponse
     {
         $this->requireLocalDemo();
 
@@ -40,14 +41,16 @@ class DemoIdentityController extends Controller
             ])
             ->orderBy('id')
             ->get()
-            ->map(function (Employee $employee) use ($activeMonthlyCycle, $employeesWithContracts): array {
+            ->map(function (Employee $employee) use ($activeMonthlyCycle, $employeesWithContracts, $roles): array {
                 $assignment = $employee->activeAssignment;
                 $accessRole = $assignment->position->access_role;
+                $accessRoles = $roles->rolesFor($employee, $assignment);
 
                 return [
                     'id' => $employee->id,
-                    'display_name' => $employee->display_name,
+                    'display_name' => $accessRole === 'ADMIN_KPI' ? 'Admin KPI Demo 001' : $employee->display_name,
                     'access_role' => $accessRole,
+                    'access_roles' => $accessRoles,
                     'org_unit_name' => $assignment->orgUnit->name,
                     'self_assignment_available' => in_array($accessRole, ['PEGAWAI', 'KEPALA_SUB_BIDANG'], true)
                         && $activeMonthlyCycle !== null
@@ -84,7 +87,7 @@ class DemoIdentityController extends Controller
         Auth::guard('web')->login($employee);
         $request->session()->regenerate();
 
-        return response()->json(['data' => $context->for($employee)]);
+        return response()->json(['data' => $context->for($employee) + ['auth_source' => 'DEMO']]);
     }
 
     public function destroy(Request $request): JsonResponse
@@ -107,15 +110,10 @@ class DemoIdentityController extends Controller
     {
         return [
             'DEMO-SDM-001',
-            'DEMO-DIR-001',
-            'DEMO-KADIV-001',
-            'DEMO-KABID-001',
-            'DEMO-KASUBBID-001',
-            'DEMO-STAF-PUSAT-001',
-            'DEMO-KORWIL-001',
             'DEMO-KACAB-001',
             'DEMO-PEMASARAN-001',
             'DEMO-OPERASIONAL-001',
+            'DEMO-STAF-PUSAT-001',
         ];
     }
 }

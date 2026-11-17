@@ -53,4 +53,9 @@ class Employee extends Authenticatable
     {
         return $this->hasMany(SsoIdentity::class);
     }
+
+    public function roleGrants(): HasMany
+    {
+        return $this->hasMany(EmployeeRoleGrant::class);
+    }
 }

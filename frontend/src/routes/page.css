@@ -44,6 +44,9 @@ body {
 .dark .period-admin-panel .period-preview-cadence, .dark .period-admin-panel .period-preview-footnote,
 .dark .period-admin-panel .period-form-footer span { color: var(--muted-foreground); }
 .dark .app-shell :is(.overview-panel,.staff-panel,.assignment-panel,.catalog-panel,.period-admin-panel,.period-comparison-panel,.audit-trail-panel,.mapping-panel,.position-mapping-panel,.position-list-panel,.position-detail-panel,.position-editor-panel,.position-editor-kpi,.position-editor-empty,.position-deactivate-confirm,.review-inbox-panel,.monitoring-panel,.history-panel,.contract-panel,.workflow-panel,.self-assessment-panel,.comparison-panel,.form-panel,.detail-panel,.history-detail,.audit-detail,.mapping-preview,.catalog-list,.catalog-form,.period-comparison-card,.period-comparison-section,.audit-trail-list,.audit-trail-detail,.monitoring-list,.monitoring-detail,.review-list,.review-detail,.history-list,.history-entry,.contract-list,.contract-detail,.assignment-list,.assignment-preview,.staff-assignment-panel,.staff-history-panel,.admin-panel) { background-color: var(--surface); color: var(--foreground); border-color: var(--border); }
+.dark .app-shell :is(.sso-mapping-panel,.sso-mapping-form,.sso-mapping-list-panel,.sso-mapping-row,.sso-mapping-empty) { background-color: var(--surface); color: var(--foreground); border-color: var(--border); }
+.dark .app-shell .sso-mapping-notice { background: #342f22; border-color: #65542f; color: #ead69e; }
+.dark .app-shell .sso-mapping-notice p { color: #ead69e; }
 .dark .app-shell :is(.toolbar,.filter-panel,.context-bar,.preview-panel,.table-heading,.empty-state,.empty-inline,.period-history,.mapping-context-bar,.position-mapping-toolbar,.position-readonly-note,.position-count-note,.catalog-toolbar,.comparison-controls,.audit-trail-tools,.monitoring-period-tools,.monitoring-filters,.audit-trail-filters,.review-filters,.history-filters) { background-color: var(--surface-subtle); color: var(--foreground); border-color: var(--border); }
 .dark .app-shell :is(h1,h2,h3,h4,p,label,legend,strong,th,td) { color: var(--foreground); }
 .dark .app-shell :is(.muted,.description,.field-help,.eyebrow,small,.muted-text,.section-description) { color: var(--text-subtle); }
@@ -271,6 +274,8 @@ textarea:focus-visible {
 .dark .sidebar { background: var(--sidebar); }
 .dark .login-context { background: radial-gradient(ellipse at 12% 12%, #27465a, transparent 50%), #142433; }
 .dark .login-card, .dark .identity-option, .dark .identity-selection { background: var(--card); color: var(--foreground); border-color: var(--border); }
+.dark .login-mode-switch { background: var(--surface-subtle); border-color: var(--border); }
+.dark .login-mode-switch button.active, .dark .login-mode-switch button:hover { background: var(--card); color: var(--foreground); border-color: var(--border); }
 .dark input, .dark select, .dark textarea { background: #13202b; color: var(--foreground); border-color: var(--input); }
 
 .brand-line strong,
@@ -320,6 +325,57 @@ textarea:focus-visible {
 
 .login-copy p {
 	margin: 0;
+}
+
+.login-mode-switch {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 4px;
+	margin: 0 0 18px;
+	padding: 4px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--surface-subtle);
+}
+
+.login-mode-switch button {
+	min-height: 42px;
+	padding: 8px 10px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--muted-foreground);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.login-mode-switch button:hover {
+	background: var(--surface);
+	color: var(--foreground);
+}
+
+.login-mode-switch button.active {
+	border-color: var(--border);
+	background: var(--surface);
+	color: var(--foreground);
+	box-shadow: 0 1px 2px rgba(20, 38, 56, 0.08);
+}
+
+.sso-login-form .field-label:not(:first-child) {
+	margin-top: 15px;
+}
+
+.sso-login-note {
+	margin: 11px 0 0;
+	color: var(--muted-foreground);
+	font-size: 11px;
+	line-height: 1.5;
+}
+
+.sso-login-form .login-button {
+	margin-top: 18px;
 }
 
 .field-label,
@@ -474,6 +530,39 @@ textarea:focus-visible {
 	padding: 18px;
 	color: #526579;
 	font-size: 12px;
+}
+
+.identity-load-state {
+	display: grid;
+	justify-items: start;
+	gap: 10px;
+	padding: 18px;
+	color: #526579;
+	font-size: 12px;
+}
+
+.identity-load-state p {
+	margin: 0;
+}
+
+.identity-reload {
+	min-height: 36px;
+	padding: 0 12px;
+	border: 1px solid var(--border);
+	border-radius: 7px;
+	background: var(--surface);
+	color: var(--foreground);
+	font: inherit;
+	cursor: pointer;
+}
+
+.identity-reload:hover {
+	background: var(--surface-subtle);
+}
+
+.identity-reload:focus-visible {
+	outline: 3px solid rgba(29, 96, 182, 0.25);
+	outline-offset: 2px;
 }
 
 .identity-selection {
@@ -1507,6 +1596,197 @@ p {
 	border-top: 2px solid #7897b5;
 	border-radius: 10px;
 	background: var(--surface);
+}
+
+.sso-mapping-panel {
+	margin-bottom: 20px;
+	padding: 24px;
+	border: 1px solid var(--border);
+	border-top: 2px solid #7897b5;
+	border-radius: 10px;
+	background: var(--surface);
+}
+
+.sso-mapping-heading,
+.sso-mapping-list-heading,
+.sso-mapping-row,
+.sso-mapping-row-actions {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.sso-mapping-heading {
+	margin-bottom: 18px;
+}
+
+.sso-mapping-heading h2 {
+	margin: 0 0 5px;
+	color: var(--foreground);
+	font-size: 20px;
+	font-weight: 680;
+	letter-spacing: -0.025em;
+}
+
+.sso-mapping-notice {
+	margin-bottom: 16px;
+	padding: 12px 14px;
+	border: 1px solid #e3d4a9;
+	border-radius: 8px;
+	background: #fbf8ed;
+	color: #544523;
+}
+
+.sso-mapping-notice strong {
+	display: block;
+	font-size: 12px;
+}
+
+.sso-mapping-notice p {
+	margin: 4px 0 0;
+	font-size: 11px;
+	line-height: 1.5;
+}
+
+.sso-mapping-layout {
+	display: grid;
+	grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+	align-items: start;
+	gap: 14px;
+}
+
+.sso-mapping-form,
+.sso-mapping-list-panel {
+	min-width: 0;
+	padding: 16px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--surface-subtle);
+}
+
+.sso-mapping-form {
+	display: grid;
+	gap: 12px;
+}
+
+.sso-mapping-form h3,
+.sso-mapping-list-heading h3 {
+	margin: 2px 0 0;
+	font-size: 15px;
+	font-weight: 680;
+}
+
+.sso-mapping-form > label:not(.sso-mapping-confirm) {
+	display: grid;
+	gap: 6px;
+	color: var(--foreground);
+	font-size: 11px;
+	font-weight: 650;
+}
+
+.sso-mapping-form .text-input {
+	min-height: 38px;
+	font-size: 12px;
+}
+
+.sso-mapping-confirm {
+	display: flex;
+	align-items: flex-start;
+	gap: 9px;
+	color: var(--muted-foreground);
+	font-size: 10px;
+	line-height: 1.45;
+}
+
+.sso-mapping-confirm input {
+	width: 16px;
+	height: 16px;
+	margin: 1px 0 0;
+	flex: 0 0 auto;
+}
+
+.sso-mapping-issuer,
+.sso-mapping-footnote {
+	color: var(--muted-foreground);
+	font-size: 10px;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+}
+
+.sso-mapping-list-heading {
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.sso-mapping-list-heading > span {
+	padding: 4px 8px;
+	border: 1px solid #c6ded6;
+	border-radius: 999px;
+	color: #286656;
+	font-size: 10px;
+	font-weight: 700;
+}
+
+.sso-mapping-list {
+	display: grid;
+	gap: 8px;
+}
+
+.sso-mapping-row {
+	align-items: center;
+	padding: 12px;
+	border: 1px solid var(--border);
+	border-radius: 7px;
+	background: var(--surface);
+}
+
+.sso-mapping-row-main {
+	display: grid;
+	min-width: 0;
+	gap: 3px;
+}
+
+.sso-mapping-row-main strong {
+	font-size: 12px;
+}
+
+.sso-mapping-row-main small {
+	color: var(--muted-foreground);
+	font-size: 10px;
+}
+
+.sso-mapping-id {
+	color: var(--muted-foreground);
+	font-size: 10px;
+	font-variant-numeric: tabular-nums;
+}
+
+.sso-mapping-row-actions {
+	align-items: center;
+	flex: 0 0 auto;
+}
+
+.sso-mapping-empty {
+	padding: 22px 16px;
+	border: 1px dashed var(--border);
+	border-radius: 7px;
+	background: var(--surface);
+	color: var(--muted-foreground);
+	font-size: 11px;
+	line-height: 1.5;
+}
+
+.sso-mapping-empty strong {
+	color: var(--foreground);
+}
+
+.sso-mapping-empty p {
+	margin: 5px 0 0;
+}
+
+.sso-mapping-footnote {
+	margin: 12px 0 0;
 }
 
 .position-mapping-heading,
@@ -6757,6 +7037,30 @@ tbody tr:last-child td {
 
 	.position-mapping-panel {
 		padding: 16px 12px;
+	}
+
+	.sso-mapping-panel {
+		padding: 16px 12px;
+	}
+
+	.sso-mapping-heading,
+	.sso-mapping-row {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.sso-mapping-heading > button,
+	.sso-mapping-form > button {
+		width: 100%;
+	}
+
+	.sso-mapping-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.sso-mapping-row-actions {
+		align-items: center;
+		justify-content: space-between;
 	}
 
 	.position-mapping-heading,

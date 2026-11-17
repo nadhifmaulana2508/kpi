@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'sso' => [
+        'base_url' => env('URL_SSO'),
+        'issuer' => env('SSO_ISSUER'),
+        'app' => env('APP'),
+        'app_token' => env('TOKEN_APP'),
+        'ca_bundle' => env('SSO_CA_BUNDLE') ?: base_path('certs/sso-ca-bundle.pem'),
+    ],
+
 ];

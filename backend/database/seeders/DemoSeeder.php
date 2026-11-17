@@ -34,12 +34,13 @@ class DemoSeeder extends Seeder
             $profiles = $this->createPeople($units);
             $this->assertDemoStructure($units, $profiles);
             $definitions = $this->createDefinitions();
+            $this->call(DemoRoleGrantSeeder::class);
             $cycle = $this->createCycle();
             $this->createContracts($profiles, $definitions, $cycle, app(DemoScoreCalculator::class));
             $this->assertDemoSeedRows();
         });
 
-        $this->command?->info('Data demo dibuat: 116 unit, 10 jabatan, 128 identitas, 54 definisi KPI, 120 kontrak, dan empat identitas khusus self-assignment.');
+        $this->command?->info('Data demo dibuat: 116 unit, 11 jabatan, 128 identitas, 1 role tambahan Admin KPI, 60 definisi KPI, 120 kontrak, dan empat identitas khusus self-assignment.');
     }
 
     private function assertDemoEnvironment(): void
@@ -113,12 +114,13 @@ class DemoSeeder extends Seeder
         }
 
         $expectedPositionCounts = [
-            'SDM' => 1,
+            'ADMIN-KPI' => 1,
             'DIR' => 3,
             'KADIV' => 9,
             'KABID' => 9,
             'KASUBBID' => 9,
-            'STAF-PUSAT' => 9,
+            'STAF-PUSAT' => 8,
+            'STAF-PUSAT-OPS' => 1,
             'KORWIL' => 4,
             'KACAB' => 28,
             'PEMASARAN' => 28,
@@ -152,7 +154,7 @@ class DemoSeeder extends Seeder
             $expectedSupervisors[$divisionHeadId] = "DEMO-DIR-$directorSuffix";
             $expectedSupervisors[$departmentHeadId] = $divisionHeadId;
             $expectedSupervisors[$subDepartmentHeadId] = $departmentHeadId;
-            $expectedSupervisors["DEMO-STAF-PUSAT-$suffix"] = $subDepartmentHeadId;
+            $expectedSupervisors["DEMO-STAF-PUSAT-$suffix"] = $number === 1 ? $divisionHeadId : $subDepartmentHeadId;
         }
 
         foreach ($expectedSupervisors as $employeeId => $expectedSupervisorId) {
@@ -243,10 +245,11 @@ class DemoSeeder extends Seeder
     {
         $expectedCounts = [
             'org_units' => 116,
-            'positions' => 10,
+            'positions' => 11,
             'employees' => 128,
             'assignments' => 128,
-            'kpi_definitions' => 54,
+            'employee_role_grants' => 1,
+            'kpi_definitions' => 60,
             'cycles' => 1,
             'performance_contracts' => 120,
         ];
@@ -266,12 +269,13 @@ class DemoSeeder extends Seeder
             'DEMO-POS-KADIV' => 9,
             'DEMO-POS-KABID' => 9,
             'DEMO-POS-KASUBBID' => 9,
-            'DEMO-POS-STAF-PUSAT' => 9,
+            'DEMO-POS-STAF-PUSAT' => 8,
+            'DEMO-POS-STAF-PUSAT-OPS' => 1,
             'DEMO-POS-KORWIL' => 4,
             'DEMO-POS-KACAB' => 28,
             'DEMO-POS-PEMASARAN' => 28,
             'DEMO-POS-OPERASIONAL' => 28,
-            'DEMO-POS-SDM' => 1,
+            'DEMO-POS-ADMIN-KPI' => 1,
         ];
 
         $actualAssignmentsByPosition = DB::table('assignments')
@@ -312,6 +316,7 @@ class DemoSeeder extends Seeder
         DB::table('cycles')->where('demo_only', true)->delete();
         DB::table('kpi_definitions')->where('demo_only', true)->delete();
         DB::table('assignments')->where('demo_only', true)->delete();
+        DB::table('employee_role_grants')->where('demo_only', true)->delete();
         DB::table('employees')->where('demo_only', true)->delete();
         DB::table('positions')->where('demo_only', true)->delete();
 
@@ -347,9 +352,12 @@ class DemoSeeder extends Seeder
 
         for ($number = 1; $number <= 9; $number++) {
             $suffix = str_pad((string) $number, 2, '0', STR_PAD_LEFT);
-            $divisionId = $make("DEMO-ORG-DIV-$suffix", "DIV-$suffix", "Divisi Demo $suffix", 'DIVISION', $units['hq']);
-            $departmentId = $make("DEMO-ORG-BID-$suffix", "BID-$suffix", "Bidang Demo $suffix", 'DEPARTMENT', $divisionId);
-            $subDepartmentId = $make("DEMO-ORG-SUB-$suffix", "SUB-$suffix", "Sub Bidang Demo $suffix", 'SUB_DEPARTMENT', $departmentId);
+            $divisionName = $number === 1 ? 'Divisi Operasional' : "Divisi Demo $suffix";
+            $departmentName = $number === 1 ? 'Bidang Operasional Demo' : "Bidang Demo $suffix";
+            $subDepartmentName = $number === 1 ? 'Sub Bidang Operasional Demo' : "Sub Bidang Demo $suffix";
+            $divisionId = $make("DEMO-ORG-DIV-$suffix", "DIV-$suffix", $divisionName, 'DIVISION', $units['hq']);
+            $departmentId = $make("DEMO-ORG-BID-$suffix", "BID-$suffix", $departmentName, 'DEPARTMENT', $divisionId);
+            $subDepartmentId = $make("DEMO-ORG-SUB-$suffix", "SUB-$suffix", $subDepartmentName, 'SUB_DEPARTMENT', $departmentId);
             $units['divisions'][$number] = $divisionId;
             $units['departments'][$number] = $departmentId;
             $units['subDepartments'][$number] = $subDepartmentId;
@@ -377,12 +385,13 @@ class DemoSeeder extends Seeder
     private function createPositions(): void
     {
         $definitions = [
-            'SDM' => ['SDM Demo', 'SDM', 'SDM'],
+            'ADMIN-KPI' => ['Admin KPI Demo', 'Admin KPI', 'ADMIN_KPI'],
             'DIR' => ['Direksi Demo', 'Pimpinan', 'DIREKSI'],
             'KADIV' => ['Kepala Divisi Demo', 'Pusat', 'KEPALA_DIVISI'],
             'KABID' => ['Kepala Bidang Demo', 'Pusat', 'KEPALA_BIDANG'],
             'KASUBBID' => ['Kepala Sub Bidang Demo', 'Pusat', 'KEPALA_SUB_BIDANG'],
             'STAF-PUSAT' => ['Staf Pusat Demo', 'Pusat', 'PEGAWAI'],
+            'STAF-PUSAT-OPS' => ['Staf Sistem dan Jaringan TI', 'Pusat', 'PEGAWAI'],
             'KORWIL' => ['Korwil Demo', 'Wilayah', 'KORWIL'],
             'KACAB' => ['Kepala Cabang Demo', 'Cabang', 'KEPALA_CABANG'],
             'PEMASARAN' => ['Staf Pemasaran Demo', 'Cabang', 'PEGAWAI'],
@@ -445,7 +454,7 @@ class DemoSeeder extends Seeder
             return $id;
         };
 
-        $add('DEMO-SDM-001', 'SDM Demo 001', 'SDM', $units['hq']);
+        $add('DEMO-SDM-001', 'Admin KPI Demo 001', 'ADMIN-KPI', $units['hq']);
 
         $directors = [];
         for ($number = 1; $number <= 3; $number++) {
@@ -460,7 +469,11 @@ class DemoSeeder extends Seeder
             $head = $add("DEMO-KADIV-$suffix", "Kepala Divisi Demo $twoDigit", 'KADIV', $units['divisions'][$number], $director);
             $sectionHead = $add("DEMO-KABID-$suffix", "Kepala Bidang Demo $twoDigit", 'KABID', $units['departments'][$number], $head);
             $subHead = $add("DEMO-KASUBBID-$suffix", "Kepala Sub Bidang Demo $twoDigit", 'KASUBBID', $units['subDepartments'][$number], $sectionHead);
-            $add("DEMO-STAF-PUSAT-$suffix", "Staf Pusat Demo $twoDigit", 'STAF-PUSAT', $units['subDepartments'][$number], $subHead);
+            $staffName = $number === 1 ? 'Staf Sistem dan Jaringan TI Demo 001' : "Staf Pusat Demo $twoDigit";
+            $staffPosition = $number === 1 ? 'STAF-PUSAT-OPS' : 'STAF-PUSAT';
+            $staffOrgUnit = $number === 1 ? $units['divisions'][$number] : $units['subDepartments'][$number];
+            $staffSupervisor = $number === 1 ? $head : $subHead;
+            $add("DEMO-STAF-PUSAT-$suffix", $staffName, $staffPosition, $staffOrgUnit, $staffSupervisor);
         }
 
         for ($number = 1; $number <= 4; $number++) {
@@ -497,7 +510,7 @@ class DemoSeeder extends Seeder
         ];
 
         foreach ($this->positions as $positionCode => $positionId) {
-            if ($positionCode === 'SDM') {
+            if ($positionCode === 'ADMIN-KPI') {
                 continue;
             }
 

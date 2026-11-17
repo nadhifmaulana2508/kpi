@@ -9,6 +9,7 @@ use App\Models\ContractItem;
 use App\Models\Employee;
 use App\Models\PerformanceContract;
 use App\Models\ReviewEvent;
+use App\Services\AccessRoleResolver;
 use App\Services\DemoScoreCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,10 @@ use Illuminate\Support\Str;
 
 class ContractWorkflowController extends Controller
 {
+    public function __construct(private readonly AccessRoleResolver $roles)
+    {
+    }
+
     public function updateItem(
         Request $request,
         string $contract,
@@ -44,13 +49,11 @@ class ContractWorkflowController extends Controller
                 ->where('contract_id', $record->id)
                 ->lockForUpdate()
                 ->findOrFail($item);
-            $role = $this->role($actor);
-
             abort_unless(in_array($record->status, ['DRAFT', 'REVISION'], true), 409, 'Kontrak sudah dikirim dan tidak dapat diubah.');
 
             $isOwner = $record->employee_id === $actor->id;
             $isReviewer = $record->reviewer_employee_id === $actor->id;
-            $isSdm = $role === 'SDM';
+            $isSdm = $this->roles->has($actor, 'SDM');
             $hasTargetChange = array_key_exists('target', $validated) || array_key_exists('weight', $validated);
             $hasActualChange = array_key_exists('actual', $validated)
                 || array_key_exists('note', $validated)
@@ -170,8 +173,7 @@ class ContractWorkflowController extends Controller
         $actor = $request->user();
         $comment = DB::transaction(function () use ($actor, $contract, $validated): ContractComment {
             $record = $this->findContract($contract, true);
-            $role = $this->role($actor);
-            $authorized = $role === 'SDM'
+            $authorized = $this->roles->has($actor, 'SDM')
                 || $record->employee_id === $actor->id
                 || $record->reviewer_employee_id === $actor->id;
 
@@ -221,8 +223,7 @@ class ContractWorkflowController extends Controller
         $actor = $request->user();
         $record = DB::transaction(function () use ($actor, $contract, $scores): PerformanceContract {
             $record = $this->findContract($contract, true);
-            $role = $this->role($actor);
-            abort_unless($record->employee_id === $actor->id || $role === 'SDM', 403, 'Hanya pegawai pemilik atau SDM yang dapat mengajukan kontrak.');
+            abort_unless($record->employee_id === $actor->id || $this->roles->has($actor, 'SDM'), 403, 'Hanya pegawai pemilik atau SDM yang dapat mengajukan kontrak.');
             abort_unless(in_array($record->status, ['DRAFT', 'REVISION'], true), 409, 'Status kontrak tidak dapat diajukan.');
 
             $record->load('items');
@@ -261,11 +262,10 @@ class ContractWorkflowController extends Controller
         $actor = $request->user();
         $record = DB::transaction(function () use ($actor, $contract, $validated, $scores): PerformanceContract {
             $record = $this->findContract($contract, true);
-            $role = $this->role($actor);
             $decision = $validated['decision'];
 
             if ($decision === 'FINAL') {
-                abort_unless($role === 'SDM', 403, 'Hanya SDM yang dapat memfinalisasi kontrak.');
+                abort_unless($this->roles->has($actor, 'SDM'), 403, 'Hanya SDM yang dapat memfinalisasi kontrak.');
                 abort_unless($record->status === 'VERIFIED', 409, 'Kontrak harus terverifikasi sebelum difinalisasi.');
             } else {
                 abort_unless($record->reviewer_employee_id === $actor->id, 403, 'Hanya reviewer yang tercatat dapat meninjau kontrak.');
@@ -308,11 +308,6 @@ class ContractWorkflowController extends Controller
         }
 
         return $query->findOrFail($id);
-    }
-
-    private function role(Employee $employee): string
-    {
-        return $employee->activeAssignment()->with('position')->firstOrFail()->position->access_role;
     }
 
     private function hasEvidence(?array $evidence): bool

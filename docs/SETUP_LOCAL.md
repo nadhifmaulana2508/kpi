@@ -43,7 +43,7 @@ Jika branch utama bukan `main`, gunakan nama branch yang dipakai repository.
 Install:
 
 - Git
-- Laravel Herd dengan PHP 8.3 atau lebih baru
+- Laravel Herd dengan PHP 8.4.1 atau lebih baru
 - Composer
 - Node.js LTS dan npm
 - SQLite/PDO SQLite aktif pada PHP Herd
@@ -72,6 +72,21 @@ php artisan db:seed
 ```
 
 `db:seed` membangun ulang data sintetis untuk local demo. Jangan menjalankannya pada database produksi atau database UAT yang berisi data penting.
+
+Untuk mencoba login SSO lokal, isi variabel `APP`, `TOKEN_APP`, dan `URL_SSO` di `backend/.env`. `SSO_ISSUER` opsional; jika kosong, URL SSO dipakai sebagai issuer mapping. Simpan semua nilai ini hanya di backend dan jangan menaruhnya di `frontend/.env.local` atau repository.
+
+Login SSO memerlukan baris `sso_identities` yang menghubungkan `issuer` + `employee_id` dari layanan identitas ke satu pegawai KPI lokal. Login akan ditolak bila mapping belum ada atau tidak aktif. Admin KPI dapat membuat dan menonaktifkan mapping dari menu `Mapping SSO` setelah masuk dengan user demo Admin.
+
+Untuk memperbarui database demo yang sudah ada tanpa menghapus kontrak dan histori demo, jalankan migration baru lalu seeder khusus berikut dari folder `backend`:
+
+```powershell
+herd php artisan migrate
+herd php artisan db:seed --class=DemoRoleGrantSeeder
+```
+
+Seeder tersebut menyiapkan satu identitas Staf Sistem dan Jaringan TI di Divisi Operasional, KPI demo untuk jabatan itu, serta grant tambahan `ADMIN_KPI`. Role utama tetap `PEGAWAI`, jadi user tetap bisa mengerjakan self-assignment. Seeder juga menandai akun Admin demo dengan role `ADMIN_KPI`, yang tidak memberikan kewenangan review atau finalisasi. ID pegawai SSO tidak ditanam di source code; Admin memasangkannya ke identitas demo ini dari menu `Mapping SSO`.
+
+Jalankan `herd php artisan db:seed` hanya jika memang ingin membangun ulang seluruh data demo. Perintah itu menghapus dan membuat kembali data sintetis.
 
 Jika ingin memakai binary PHP Herd secara eksplisit, gunakan pola berikut:
 
@@ -130,7 +145,7 @@ Verifikasi API dari terminal lain:
 curl.exe -I http://127.0.0.1:8100/up
 ```
 
-Login prototype masih memakai selector user dummy. SSO belum diaktifkan.
+Login prototype menyediakan mode Akun kerja SSO dan User demo. Mode SSO memanggil endpoint identitas dari backend Laravel, menggunakan ID pegawai serta password, lalu mengambil profil melalui token Bearer server-side. Token tidak dikirim ke browser. Akun SSO yang belum dipetakan ke pegawai KPI lokal belum dapat membuka workspace.
 
 ## 8. Troubleshooting singkat
 
