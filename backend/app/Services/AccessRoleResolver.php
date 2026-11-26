@@ -38,4 +38,16 @@ class AccessRoleResolver
 
         return in_array('ADMIN_KPI', $roles, true) || in_array('SDM', $roles, true);
     }
+
+    public function isSelfServiceOnly(Employee $employee, ?Assignment $assignment = null): bool
+    {
+        if ($this->canManageKpi($employee, $assignment)) {
+            return false;
+        }
+
+        $assignment ??= $employee->activeAssignment()->with('position')->first();
+        $role = $assignment?->position?->access_role;
+
+        return in_array($role, ['PEGAWAI', 'KEPALA_SUB_BIDANG', 'KEPALA_BIDANG'], true);
+    }
 }

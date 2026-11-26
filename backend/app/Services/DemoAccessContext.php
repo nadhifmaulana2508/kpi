@@ -9,18 +9,16 @@ use Illuminate\Support\Collection;
 
 class DemoAccessContext
 {
-    public function __construct(private readonly AccessRoleResolver $roles)
-    {
-    }
+    public function __construct(private readonly AccessRoleResolver $roles) {}
 
     public function for(Employee $employee): array
     {
-        abort_unless($employee->demo_only, 403, 'Konteks hanya tersedia untuk identitas demo.');
+        abort_unless($employee->demo_only, 403, 'Konteks hanya tersedia untuk identitas lokal.');
 
         $assignment = $this->activeDemoAssignment($employee)->with(['orgUnit', 'position'])->first();
 
         if (! $assignment) {
-            abort(403, 'Identitas demo tidak memiliki penugasan demo yang aktif.');
+            abort(403, 'Identitas tidak memiliki penugasan aktif.');
         }
 
         $role = $assignment->position->access_role;
@@ -29,7 +27,7 @@ class DemoAccessContext
         return [
             'id' => $employee->id,
             'employee_id' => $employee->id,
-            'display_name' => $role === 'ADMIN_KPI' ? 'Admin KPI Demo 001' : $employee->display_name,
+            'display_name' => $role === 'ADMIN_KPI' ? 'Admin KPI' : $employee->display_name,
             'access_role' => $role,
             'access_roles' => $accessRoles,
             'position_name' => $assignment->position->name,

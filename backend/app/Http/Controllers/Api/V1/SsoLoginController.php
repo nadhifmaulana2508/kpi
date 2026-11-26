@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\DemoAccessContext;
-use App\Services\SsoIdentityResolver;
+use App\Services\SsoProfileProvisioner;
 use App\Services\SsoSessionEstablisher;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +16,7 @@ class SsoLoginController extends Controller
     public function store(
         Request $request,
         DemoAccessContext $context,
-        SsoIdentityResolver $identities,
+        SsoProfileProvisioner $profiles,
         SsoSessionEstablisher $sessions,
     ): JsonResponse {
         $validated = $request->validate([
@@ -77,19 +77,23 @@ class SsoLoginController extends Controller
             }
 
             $profile = $whoamiResponse->json('data');
-            $subject = is_array($profile) ? ($profile['employee_id'] ?? null) : null;
+            if (! is_array($profile)) {
+                return $this->failure('Profil dari layanan identitas belum berbentuk data pegawai.', 502, 'SSO_PROFILE_INVALID');
+            }
+
+            $subject = $profile['employee_id'] ?? null;
             if (! is_string($subject) || trim($subject) === '') {
                 return $this->failure('Profil dari layanan identitas belum memuat employee_id.', 502, 'SSO_SUBJECT_MISSING');
             }
 
             $issuer = (string) (config('services.sso.issuer') ?: $baseUrl);
-            $identity = $identities->findMappedIdentity($issuer, $subject);
+            $identity = $profiles->provision($issuer, $profile);
 
             if (! $identity) {
                 return $this->failure(
-                    'Login SSO berhasil, tetapi akun ini belum dipetakan ke identitas KPI. Hubungkan employee_id pada master SSO terlebih dahulu.',
+                    'Profil SSO sudah terbaca, tetapi identitas KPI tidak dapat dibuat. Pastikan employee_id aktif dan profil memuat nama, jabatan, unit kerja, serta kantor/cabang.',
                     403,
-                    'SSO_IDENTITY_UNMAPPED',
+                    'SSO_PROFILE_MAPPING_FAILED',
                 );
             }
 

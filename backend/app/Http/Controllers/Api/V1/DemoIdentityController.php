@@ -19,14 +19,14 @@ class DemoIdentityController extends Controller
         $this->requireLocalDemo();
 
         $demoAssignment = static fn ($query) => $query->demoOnly();
-        $activeMonthlyCycle = KpiCycle::query()
+        $activeCycle = KpiCycle::query()
             ->where('demo_only', true)
-            ->where('cadence', 'MONTHLY')
             ->where('status', 'OPEN')
             ->orderByDesc('starts_at')
+            ->orderByDesc('created_at')
             ->first();
-        $employeesWithContracts = $activeMonthlyCycle
-            ? PerformanceContract::query()->demoOnly()->where('cycle_id', $activeMonthlyCycle->id)->pluck('employee_id')->flip()
+        $employeesWithContracts = $activeCycle
+            ? PerformanceContract::query()->demoOnly()->where('cycle_id', $activeCycle->id)->pluck('employee_id')->flip()
             : collect();
 
         $identities = Employee::query()
@@ -41,19 +41,19 @@ class DemoIdentityController extends Controller
             ])
             ->orderBy('id')
             ->get()
-            ->map(function (Employee $employee) use ($activeMonthlyCycle, $employeesWithContracts, $roles): array {
+            ->map(function (Employee $employee) use ($activeCycle, $employeesWithContracts, $roles): array {
                 $assignment = $employee->activeAssignment;
                 $accessRole = $assignment->position->access_role;
                 $accessRoles = $roles->rolesFor($employee, $assignment);
 
                 return [
                     'id' => $employee->id,
-                    'display_name' => $accessRole === 'ADMIN_KPI' ? 'Admin KPI Demo 001' : $employee->display_name,
+                    'display_name' => $accessRole === 'ADMIN_KPI' ? 'Admin KPI' : $employee->display_name,
                     'access_role' => $accessRole,
                     'access_roles' => $accessRoles,
                     'org_unit_name' => $assignment->orgUnit->name,
-                    'self_assignment_available' => in_array($accessRole, ['PEGAWAI', 'KEPALA_SUB_BIDANG'], true)
-                        && $activeMonthlyCycle !== null
+                    'self_assignment_available' => in_array($accessRole, ['PEGAWAI', 'KEPALA_SUB_BIDANG', 'KEPALA_BIDANG'], true)
+                        && $activeCycle !== null
                         && ! $employeesWithContracts->has($employee->id),
                 ];
             })
@@ -81,7 +81,7 @@ class DemoIdentityController extends Controller
             ->demoOnly()
             ->exists();
 
-        abort_unless($hasDemoAssignment, 422, 'Identitas tidak memiliki penugasan demo yang aktif.');
+        abort_unless($hasDemoAssignment, 422, 'Identitas tidak memiliki penugasan aktif.');
 
         $request->session()->forget('sso_identity_id');
         Auth::guard('web')->login($employee);
@@ -103,17 +103,19 @@ class DemoIdentityController extends Controller
 
     private function requireLocalDemo(): void
     {
-        abort_unless(app()->environment('local'), 403, 'Pemilih identitas hanya tersedia pada demo lokal.');
+        abort_unless(app()->environment('local'), 403, 'Pemilih profil hanya tersedia pada lingkungan lokal.');
     }
 
     private function demoScenarioIdentityIds(): array
     {
         return [
             'DEMO-SDM-001',
+            'DEMO-KASUBBID-001',
+            'DEMO-KABID-OPS-001',
+            'DEMO-KABID-001',
             'DEMO-KACAB-001',
-            'DEMO-PEMASARAN-001',
+            'DEMO-AO-KREDIT-001',
             'DEMO-OPERASIONAL-001',
-            'DEMO-STAF-PUSAT-001',
         ];
     }
 }

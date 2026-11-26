@@ -8,7 +8,7 @@ class DemoScoreCalculator
 {
     private const MIN_VALID_WEIGHT = 0.7;
 
-    private const CAP_A = 120.0;
+    private const CAP_A = 100.0;
 
     public function recalculate(PerformanceContract $contract): array
     {
@@ -17,7 +17,7 @@ class DemoScoreCalculator
 
     public function calculate(PerformanceContract $contract, bool $persist = false): array
     {
-        abort_unless($contract->demo_only, 409, 'Rumus demo hanya dapat dipakai pada kontrak demo.');
+        abort_unless($contract->demo_only, 409, 'Rumus ini hanya berlaku untuk kontrak penilaian.');
 
         $contract->loadMissing('items');
         $items = $contract->items;
@@ -62,7 +62,7 @@ class DemoScoreCalculator
         $message = null;
 
         if (! $validWeightsSumToOne) {
-            $message = 'Total bobot kontrak demo harus 100%.';
+            $message = 'Total bobot penilaian harus 100%.';
         } elseif ($pendingCount > 0) {
             $message = $pendingCount.' KPI belum lengkap.';
         } elseif ($validWeight < self::MIN_VALID_WEIGHT) {
@@ -71,17 +71,31 @@ class DemoScoreCalculator
             $kpiScore = round($weightedScore / $validWeight, 3);
         }
 
+        $ratings = data_get($contract->behavior_evaluation, 'ratings', []);
+        $behaviorKeys = ['integrity', 'service', 'teamwork', 'compliance', 'responsibility'];
+        $behaviorComplete = collect($behaviorKeys)->every(
+            fn (string $key): bool => isset($ratings[$key]) && (int) $ratings[$key] >= 1 && (int) $ratings[$key] <= 5,
+        );
+        $behaviorScore = $behaviorComplete
+            ? round(array_sum(array_map(fn (string $key): int => (int) $ratings[$key], $behaviorKeys)) / (count($behaviorKeys) * 5) * 100, 2)
+            : null;
+        $finalScore = $kpiScore !== null && $behaviorScore !== null
+            ? round($kpiScore * 0.8 + $behaviorScore * 0.2, 2)
+            : null;
+
         return [
             'kpi_score' => $kpiScore,
-            'behavior_score' => null,
-            'final_score' => null,
+            'behavior_score' => $behaviorScore,
+            'final_score' => $finalScore,
             'rating' => null,
             'valid_weight' => round($validWeight, 4),
             'total_weight' => round($totalWeight, 4),
             'pending_items' => $pendingCount,
             'formula_version' => $contract->cycle?->formula_version ?? 'demo-prototype-v1',
             'demo_only' => true,
-            'message' => $message,
+            'message' => $message ?? ($behaviorScore === null
+                ? 'Lima indikator perilaku belum lengkap.'
+                : 'Nilai akhir memakai bobot KPI 80% dan perilaku 20%.'),
             'item_scores' => $itemScores,
         ];
     }

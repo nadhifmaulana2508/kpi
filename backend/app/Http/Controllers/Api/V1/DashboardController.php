@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\KpiCycle;
 use App\Models\PerformanceContract;
+use App\Services\AccessRoleResolver;
 use App\Services\DemoAccessContext;
 use App\Services\DemoScoreCalculator;
-use App\Services\AccessRoleResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,7 +19,7 @@ class DashboardController extends Controller
         $cycleId = $request->query('cycle_id');
         $cycle = $cycleId
             ? KpiCycle::query()->where('demo_only', true)->findOrFail($cycleId)
-            : KpiCycle::query()->where('demo_only', true)->where('status', 'OPEN')->latest('starts_at')->firstOrFail();
+            : KpiCycle::query()->where('demo_only', true)->where('status', 'OPEN')->orderByDesc('starts_at')->orderByDesc('created_at')->firstOrFail();
 
         /** @var Employee $employee */
         $employee = $request->user();
@@ -31,8 +31,12 @@ class DashboardController extends Controller
             ->where('cycle_id', $cycle->id)
             ->with('items');
 
-        if ($role === 'PEGAWAI') {
-            $contracts->where('employee_id', $employee->id);
+        $selfServiceOnly = $roles->isSelfServiceOnly($employee, $assignment);
+
+        if ($selfServiceOnly) {
+            $contracts->where(fn ($query) => $query
+                ->where('employee_id', $employee->id)
+                ->orWhere('reviewer_employee_id', $employee->id));
         } else {
             $contracts->whereIn('org_unit_id', $scopeIds);
         }

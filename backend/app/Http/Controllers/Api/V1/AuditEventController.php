@@ -14,6 +14,94 @@ use Illuminate\Http\Request;
 
 class AuditEventController extends Controller
 {
+    public function recordMenuAccess(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'menu_key' => ['required', 'string', 'in:overview,mine,reviews,assignment,periods,history,monitoring,catalog,mapping,positionKpis,positions,ssoMappings,audit,comparison,auditLog,mine-kpi,mine-behavior,mine-approval,mine-history'],
+            'menu_label' => ['required', 'string', 'max:120'],
+            'previous_menu' => ['nullable', 'string', 'in:overview,mine,reviews,assignment,periods,history,monitoring,catalog,mapping,positionKpis,positions,ssoMappings,audit,comparison,auditLog,mine-kpi,mine-behavior,mine-approval,mine-history'],
+            'previous_menu_label' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        /** @var Employee $employee */
+        $employee = $request->user();
+        $event = AuditEvent::query()->create([
+            'actor_employee_id' => $employee->id,
+            'action' => 'MENU_ACCESSED',
+            'subject_type' => 'MENU',
+            'subject_id' => $validated['menu_key'],
+            'after_state' => [
+                'menu_label' => $validated['menu_label'],
+                'previous_menu' => $validated['previous_menu'] ?? null,
+                'previous_menu_label' => $validated['previous_menu_label'] ?? null,
+            ],
+        ]);
+
+        return response()->json(['data' => ['id' => (string) $event->id]], 201);
+    }
+
+    public function adminLog(Request $request, AccessRoleResolver $roles): JsonResponse
+    {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'action' => ['nullable', 'string', 'max:80'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        /** @var Employee $employee */
+        $employee = $request->user();
+        $assignment = $employee->activeAssignment()->with('position')->firstOrFail();
+        abort_unless($roles->canManageKpi($employee, $assignment), 403, 'Audit log hanya tersedia untuk Admin KPI dan SDM.');
+
+        $query = AuditEvent::query()
+            ->with(['actor.activeAssignment.position', 'actor.activeAssignment.orgUnit']);
+
+        if (! empty($validated['search'])) {
+            $search = trim($validated['search']);
+            $query->where(function (Builder $events) use ($search): void {
+                $events->where('actor_employee_id', 'like', '%'.$search.'%')
+                    ->orWhereHas('actor', fn (Builder $actors) => $actors->where('display_name', 'like', '%'.$search.'%'));
+            });
+        }
+        if (! empty($validated['action'])) {
+            $query->where('action', $validated['action']);
+        }
+        if (! empty($validated['from'])) {
+            $query->whereDate('created_at', '>=', $validated['from']);
+        }
+        if (! empty($validated['to'])) {
+            $query->whereDate('created_at', '<=', $validated['to']);
+        }
+
+        $page = $query->latest('created_at')->paginate($validated['per_page'] ?? 50);
+
+        return response()->json([
+            'data' => $page->getCollection()->map(fn (AuditEvent $event): array => [
+                'id' => (string) $event->id,
+                'actor_id' => $event->actor_employee_id ?? '',
+                'actor_name' => $event->actor?->display_name ?? 'Identitas tidak aktif',
+                'actor_position_name' => $event->actor?->activeAssignment?->position?->name,
+                'actor_org_unit_name' => $event->actor?->activeAssignment?->orgUnit?->name,
+                'action' => $event->action,
+                'object_type' => $event->subject_type,
+                'object_id' => $event->subject_id,
+                'reason' => data_get($event->after_state, 'reason') ?? data_get($event->after_state, 'comment'),
+                'occurred_at' => $event->created_at?->toISOString(),
+                'before' => $event->before_state,
+                'after' => $event->after_state,
+            ])->values(),
+            'meta' => [
+                'page' => $page->currentPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+                'last_page' => $page->lastPage(),
+            ],
+        ]);
+    }
+
     public function index(Request $request, AccessRoleResolver $roles): JsonResponse
     {
         $validated = $request->validate([

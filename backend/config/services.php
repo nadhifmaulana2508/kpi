@@ -43,4 +43,8 @@ return [
         'ca_bundle' => env('SSO_CA_BUNDLE') ?: base_path('certs/sso-ca-bundle.pem'),
     ],
 
+    'simpeg' => [
+        'base_url' => env('SIMPEG_API_BASE_URL', env('URL_SSO')),
+    ],
+
 ];

@@ -23,14 +23,14 @@ Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil 
 - Layar masuk diubah menjadi dua area yang jelas: konteks KPI di kiri dan pemilihan identitas di kanan.
 - Konteks layar menampilkan periode yang diatur Admin, cakupan Pusat/Korwil/satu cabang, serta penanda bahwa data masih sintetis.
 - Setelah identitas dipilih, ringkasan identitas tampil sebelum tombol masuk digunakan.
-- Daftar user dummy untuk tahap ini berisi Admin KPI/SDM, satu Staf Pusat Divisi Operasional, Kepala Cabang, Staf Pemasaran, dan Staf Operasional pada satu cabang.
+- Daftar user simulasi untuk tahap ini berisi Admin KPI/SDM, satu Staf Pusat Divisi Operasional, Kepala Cabang, Staf Pemasaran, dan Staf Operasional pada satu cabang.
 - Identitas dikelompokkan menjadi Admin KPI/SDM, Pusat Divisi Operasional, dan Cabang Contoh 001 agar pilihan demo tetap ringkas.
 - Label `PEGAWAI` di UI disederhanakan menjadi `Staf`; unit Cabang tetap membedakan Pemasaran dan Operasional.
 - Periode 3 bulan tetap menjadi default rancangan sesuai PRD. Opsi 1, 3, 6, dan 12 bulan dicatat sebagai konfigurasi Admin untuk prototipe berikutnya, belum sebagai pengaturan tersimpan.
 - Layar Admin KPI sekarang menyediakan selector cadence 1, 3, 6, dan 12 bulan dengan default 3 bulan.
 - Preview periode menghitung tanggal mulai dan tanggal selesai dari cadence yang dipilih.
 - Status awal dapat dipreview sebagai Draft, Open, atau Closed dengan penjelasan konsekuensi operasionalnya.
-- Tombol `Simpan periode dummy` menambahkan periode ke daftar state frontend; refresh browser akan mengembalikan data awal karena belum memakai API.
+- Tombol `Simpan periode simulasi` menambahkan periode ke daftar state frontend; refresh browser akan mengembalikan data awal karena belum memakai API.
 - Riwayat tiga periode contoh ditampilkan agar admin dapat memilih dan memuat ulang konfigurasi periode ke form.
 - Step ini tidak menambah endpoint atau tabel; semua aksi periode masih berada di state frontend untuk prototipe.
 - Fokus MVP dikunci ke satu Cabang Contoh 001 dengan dua jalur staf: Pemasaran/Bisnis dan Operasional/Non-bisnis.
@@ -38,7 +38,7 @@ Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil 
 - Nama KPI demo dibuat lebih mudah dipahami per jalur, tetapi tetap diberi penanda `demo` dan belum dianggap katalog resmi.
 - Self-assignment tetap memilih dari katalog Admin; staf tidak membuat KPI bebas dari form.
 - Layar `Riwayat Penilaian` sekarang memfilter history sesuai jalur Pemasaran/Bisnis atau Operasional/Non-bisnis.
-- Riwayat dummy mencakup empat status: Draft, Diajukan, Revisi, dan Final.
+- Riwayat simulasi mencakup empat status: Draft, Diajukan, Revisi, dan Final.
 - Detail read-only menampilkan rentang periode, skor demo, reviewer, tanggal submit/final, catatan proses, target, realisasi, dan skor per indikator.
 - Tidak ada kontrol edit pada history; perubahan tetap dilakukan dari alur KPI aktif.
 - Dashboard Staf Cabang sekarang menggantikan ringkasan generik dengan konteks jalur kerja Pemasaran atau Operasional.
@@ -52,51 +52,51 @@ Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil 
 - Tahap berikutnya memvalidasi realisasi, bukti, dan perubahan yang belum disimpan sebelum staf dapat lanjut.
 - Tahap Review menampilkan ringkasan jumlah indikator, realisasi, bukti, reviewer, dan alasan blokir jika belum siap.
 - State DRAFT dan REVISION memakai alur self-assessment; status SUBMITTED/FINAL tetap read-only untuk staf.
-- Inbox evaluasi Kepala Cabang memakai empat tugas dummy dari dua jalur: Pemasaran/Bisnis dan Operasional/Non-bisnis.
+- Inbox evaluasi Kepala Cabang memakai empat tugas simulasi dari dua jalur: Pemasaran/Bisnis dan Operasional/Non-bisnis.
 - Filter inbox mencakup jalur, status Diajukan/Revisi, dan usia tugas 0-3, 4-7, atau 8+ hari.
 - Daftar tugas menampilkan pegawai, jabatan, periode, tanggal pengajuan, usia antrean, dan deadline review.
 - Detail tugas menampilkan skor demo, status, snapshot target-realisasi per indikator, serta catatan proses; keputusan reviewer berada di panel terpisah.
-- Pada step 8, tombol detail review masih disabled sebagai penanda alur berikutnya; step 9 sekarang mengaktifkan prototipe keputusan dummy di detail tugas.
-- Step ini tidak menambah endpoint atau tabel; inbox masih memakai data dummy frontend dan endpoint workspace yang sudah ada.
+- Pada step 8, tombol detail review masih disabled sebagai penanda alur berikutnya; step 9 sekarang mengaktifkan prototipe keputusan simulasi di detail tugas.
+- Step ini tidak menambah endpoint atau tabel; inbox masih memakai data simulasi frontend dan endpoint workspace yang sudah ada.
 - Detail review sekarang menampilkan snapshot indikator per item: target, realisasi, skor demo, referensi bukti, dan catatan staf.
-- Reviewer dapat menulis catatan wajib lalu memilih `Minta revisi` atau `Verifikasi` sebagai state dummy di browser.
-- State keputusan dummy tetap terlihat pada tugas yang dipilih dan tidak mengubah status backend atau kontrak API.
+- Reviewer dapat menulis catatan wajib lalu memilih `Minta revisi` atau `Verifikasi` sebagai state simulasi di browser.
+- State keputusan simulasi tetap terlihat pada tugas yang dipilih dan tidak mengubah status backend atau kontrak API.
 - Tombol keputusan diberi validasi catatan kosong dan state disabled agar reviewer tidak menyimpan keputusan tanpa alasan.
 - Menu `Monitoring` sekarang tersedia khusus untuk user Admin KPI / SDM pada desktop dan mobile.
-- Monitoring dummy menampilkan periode aktif Triwulan IV 2026 dengan cakupan Cabang Contoh 001.
+- Monitoring simulasi menampilkan periode aktif Triwulan IV 2026 dengan cakupan Cabang Contoh 001.
 - Ringkasan monitoring menampilkan total kontrak, kontrak menunggu review, kontrak melewati deadline, dan kontrak siap finalisasi.
 - Breakdown status mencakup Draf, Diajukan, Revisi, Terverifikasi, dan Final.
 - Breakdown jalur membandingkan Pemasaran/Bisnis dan Operasional/Non-bisnis dengan indikator proporsi kontrak.
 - Tabel perhatian Admin memfilter jalur dan status non-final serta menampilkan deadline, tanggal pengajuan, skor demo, dan alasan perhatian.
-- Step ini tidak menambah endpoint atau tabel; seluruh angka monitoring masih berasal dari data dummy frontend.
+- Step ini tidak menambah endpoint atau tabel; seluruh angka monitoring masih berasal dari data simulasi frontend.
 - Menu `Katalog KPI` sekarang tersedia khusus untuk user Admin KPI / SDM pada desktop dan mobile.
-- Katalog dummy membedakan indikator jalur Pemasaran/Bisnis dan Operasional/Non-bisnis.
+- Katalog simulasi membedakan indikator jalur Pemasaran/Bisnis dan Operasional/Non-bisnis.
 - Setiap indikator menampilkan kode, kelompok, tipe, target, bobot, sumber data demo, dan state Draft/Aktif.
 - Filter katalog mencakup jalur dan state agar admin dapat melihat indikator yang siap dipakai atau masih disiapkan.
 - Form tambah indikator frontend-only menyediakan jalur, kode opsional, kelompok, nama, tipe, unit, target, bobot, sumber data, dan state awal.
 - Validasi form menolak field wajib yang kosong, target tidak sesuai tipe, bobot di luar rentang, dan kode duplikat.
-- Indikator baru langsung masuk ke daftar katalog dummy dan hilang setelah refresh karena belum tersambung API.
+- Indikator baru langsung masuk ke daftar katalog simulasi dan hilang setelah refresh karena belum tersambung API.
 - Menu `Penetapan` sekarang tersedia khusus untuk user Admin KPI / SDM pada desktop dan mobile.
 - Admin dapat memilih jalur Staf Pemasaran/Bisnis atau Staf Operasional/Non-bisnis.
-- Daftar penetapan hanya mengambil indikator state Aktif dari katalog dummy.
+- Daftar penetapan hanya mengambil indikator state Aktif dari katalog simulasi.
 - Target dan bobot dapat disesuaikan per indikator sebelum masuk preview self-assignment.
 - Preview menampilkan paket KPI yang akan dilihat staf, total bobot, dan status kesiapan penetapan.
 - Tombol `Bagi bobot rata` membantu menghasilkan total 100% pada skenario demo.
-- `Simpan penetapan dummy` hanya menyimpan state frontend dan tidak mengubah kontrak self-assignment atau backend.
+- `Simpan penetapan simulasi` hanya menyimpan state frontend dan tidak mengubah kontrak self-assignment atau backend.
 - Validasi penetapan menolak daftar kosong, target/bobot tidak valid, dan total bobot selain 100%.
-- Mapping penetapan dummy sekarang disimpan di state frontend per jalur, sehingga hasil Admin dapat dibaca oleh layar staf tanpa endpoint baru.
+- Mapping penetapan simulasi sekarang disimpan di state frontend per jalur, sehingga hasil Admin dapat dibaca oleh layar staf tanpa endpoint baru.
 - Jalur Pemasaran/Bisnis memiliki tiga KPI Aktif yang sudah dipetakan sebagai demo awal.
 - Jalur Operasional/Non-bisnis sengaja dimulai tanpa mapping untuk memperlihatkan empty state yang dapat diisi Admin dari layar Penetapan.
 - Self-assignment Staf Cabang hanya mengambil KPI Aktif yang ada di mapping jalurnya; KPI Draft dan indikator jalur lain tidak ikut ditampilkan.
 - Target dan bobot pada self-assignment ditampilkan sebagai inherited dan read-only. Staf hanya memilih indikator yang boleh dipakai.
 - Empty state menjelaskan bahwa Admin belum menetapkan KPI untuk jalur tersebut dan memberi konteks tindakan berikutnya.
-- Tombol simpan pada jalur staf memberi feedback draf frontend tanpa mengirim mapping dummy ke endpoint kontrak.
+- Tombol simpan pada jalur staf memberi feedback draf frontend tanpa mengirim mapping simulasi ke endpoint kontrak.
 - Form self-assignment tetap responsif, mempertahankan loading, empty, error, selected, read-only, dan disabled state.
 - Step 14 menambahkan penyimpanan draf frontend-only per identitas dan jalur staf.
 - Status draf ditampilkan sebagai `DRAFT` dan masih dapat diedit sebelum pengajuan.
 - Tombol `Ajukan self-assessment` hanya aktif setelah draf tersimpan dan minimal satu KPI dipilih.
 - Setelah diajukan, status berubah menjadi `SUBMITTED`, pilihan KPI terkunci, dan layar memberi feedback menunggu reviewer.
-- Record draf/submission dummy disimpan di state browser selama sesi demo dan tidak menambah endpoint backend.
+- Record draf/submission simulasi disimpan di state browser selama sesi demo dan tidak menambah endpoint backend.
 - Submission `SUBMITTED` dari staf sekarang muncul sebagai tugas baru di Inbox Evaluasi Kepala Cabang.
 - Tugas dinamis membawa jalur, nama staf, periode, tanggal pengajuan, deadline demo, dan snapshot KPI inherited.
 - Reviewer dapat memilih `REVISION` atau `VERIFIED` dengan catatan wajib; keputusan tetap frontend-only.
@@ -115,7 +115,7 @@ Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil 
 - Detail histori tetap read-only dan membawa item snapshot yang sama dengan keputusan reviewer agar jejak penilaian konsisten.
 - Finalisasi tidak menambah endpoint atau tabel; state demo tetap berada di browser dan dipertahankan saat berpindah role selama sesi.
 - Step 18 menambahkan menu `Audit trail` khusus Admin KPI/SDM pada navigasi desktop dan mobile.
-- Audit trail dummy mencatat kejadian `VERIFIED` dan `FINAL` dari jalur Pemasaran/Bisnis serta Operasional/Non-bisnis.
+- Audit trail simulasi mencatat kejadian `VERIFIED` dan `FINAL` dari jalur Pemasaran/Bisnis serta Operasional/Non-bisnis.
 - Setiap kejadian menampilkan pegawai, jabatan, jalur, periode, aktor, role aktor, waktu keputusan, dan catatan.
 - Filter audit trail tersedia berdasarkan jalur dan status keputusan.
 - Detail read-only menampilkan snapshot indikator saat keputusan: target, realisasi, dan skor demo.
@@ -129,26 +129,26 @@ Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil 
 - Tombol `Lihat semua audit` menghapus konteks fokus agar Admin dapat kembali ke daftar audit global.
 - Step 20 menambahkan selector periode bersama pada Monitoring Admin KPI dan Audit trail.
 - Default filter periode adalah `Triwulan IV 2026` sebagai periode aktif demo.
-- Selector menyediakan `Semua periode`, Triwulan III 2026, Triwulan IV 2026, dan Semester I 2027 dari data periode dummy.
+- Selector menyediakan `Semua periode`, Triwulan III 2026, Triwulan IV 2026, dan Semester I 2027 dari data periode simulasi.
 - Ringkasan monitoring, distribusi status, breakdown jalur, tabel perhatian, jumlah audit, dan daftar audit mengikuti periode yang dipilih.
 - Header kedua layar menampilkan nama dan rentang tanggal periode terpilih agar konteks tidak hilang saat berpindah halaman.
 - Aksi `Lihat audit` dari Monitoring menyamakan filter periode sebelum membuka detail audit.
 - Step ini tetap frontend-only dan tidak menambah endpoint atau tabel backend baru.
 - Step 21 menambahkan menu `Banding periode` khusus Admin KPI/SDM pada navigasi desktop dan mobile.
-- Layar perbandingan menampilkan dua selector periode dummy: Periode A dan Periode B.
+- Layar perbandingan menampilkan dua selector periode simulasi: Periode A dan Periode B.
 - Default perbandingan adalah Triwulan III 2026 versus Triwulan IV 2026.
 - Setiap kartu periode menampilkan rentang tanggal, status periode, total kontrak, distribusi DRAFT/SUBMITTED/REVISION/VERIFIED/FINAL, dan jumlah Final per jalur.
 - Ringkasan pergeseran menampilkan delta total kontrak, total Final, Final Pemasaran, dan Final Operasional dari Periode A ke Periode B.
 - Periode yang belum memiliki snapshot perbandingan menampilkan empty state, bukan angka sintetis tambahan.
 - Jika Admin memilih periode yang sama, UI menampilkan validasi agar dua sisi perbandingan berbeda.
-- Step ini memakai data dummy frontend dan tidak menambah endpoint atau tabel backend baru.
+- Step ini memakai data simulasi frontend dan tidak menambah endpoint atau tabel backend baru.
 - Step 22 menambahkan aksi `Lihat kontrak` pada setiap status DRAFT, SUBMITTED, REVISION, VERIFIED, dan FINAL di kartu perbandingan.
 - Aksi status membawa periode dan status ke Monitoring Admin KPI sebagai filter aktif.
 - Aksi `Final per jalur` juga membawa filter jalur Pemasaran/Bisnis atau Operasional/Non-bisnis.
 - Monitoring menampilkan banner konteks `KONTEKS DARI PERBANDINGAN` agar asal filter tetap terbaca.
 - Tombol `Lihat semua monitoring` menghapus konteks drill-down tanpa mengubah data.
 - Filter Monitoring sekarang dapat memilih status FINAL saat dibuka dari perbandingan, sementara tampilan default tetap fokus pada status aktif.
-- Data dummy Monitoring ditambah satu contoh kontrak Final agar jalur drill-down Final dapat dipreview.
+- Data simulasi Monitoring ditambah satu contoh kontrak Final agar jalur drill-down Final dapat dipreview.
 - Step ini tetap frontend-only dan tidak menambah endpoint atau tabel backend baru.
 - Step 23 menegaskan aksi `Lihat audit` pada setiap baris kontrak hasil drill-down Monitoring.
 - Aksi baris membawa pegawai, periode, jalur, dan status kontrak ke Audit trail.
@@ -162,7 +162,7 @@ Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil 
 - Jika konteks kontrak belum memiliki kejadian VERIFIED/FINAL, ringkasan tetap terlihat dan daftar audit mempertahankan empty state yang jujur.
 - Catatan read-only menegaskan bahwa perubahan tetap dilakukan melalui workflow yang berwenang.
 - Step 25 menambahkan menu `Master jabatan` khusus Admin KPI/SDM.
-- Master jabatan dummy memuat Staf Pemasaran, Staf Operasional, Kepala Bidang Pemasaran, Kepala Bidang Operasional, dan Kepala Cabang.
+- Master jabatan simulasi memuat Staf Pemasaran, Staf Operasional, Kepala Bidang Pemasaran, Kepala Bidang Operasional, dan Kepala Cabang.
 - Selector jabatan dan daftar jabatan membuat konteks organisasi cepat dipilih tanpa menambah daftar user atau cabang baru.
 - Detail jabatan menampilkan level, organisasi, cakupan kerja, jalur Pemasaran/Operasional, serta status mapping.
 - Mapping KPI read-only hanya menampilkan indikator katalog berstatus Aktif beserta target, bobot, unit, sumber data, dan total bobot.
@@ -300,7 +300,7 @@ Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil 
 - Pengecekan kontras warna note inherited dan field read-only: lulus untuk pasangan teks baru.
 - Server frontend lokal merespons `200` di `http://127.0.0.1:5180`.
 - Backend demo dijalankan memakai PHP 8.4.27 dari Laravel Herd pada `http://127.0.0.1:8100`.
-- Endpoint identitas, CSRF, login dummy Pemasaran, dan siklus OPEN merespons `200` saat diuji dengan origin frontend.
+- Endpoint identitas, CSRF, login simulasi Pemasaran, dan siklus OPEN merespons `200` saat diuji dengan origin frontend.
 - Click-through browser Step 27 belum dicatat karena Edge headless diblokir execution policy; state mapping Aktif, target/bobot read-only, empty mapping, jabatan nonaktif, reload setelah simpan, label form, focus state, hasil check/build, dan respons HTTP lokal diverifikasi dari code path.
 
 ## Port demo lokal
@@ -309,13 +309,13 @@ Design Read: browser memakai satu kontrak CurrentUser; Laravel menyamakan hasil 
 - Backend KPI: `http://127.0.0.1:8100`
 - Port `5174` dan `8001` dipakai project lain di mesin yang sama.
 - Endpoint `GET /api/v1/demo/identities` melalui frontend merespons `200`.
-- Sesi dummy `DEMO-KASUBBID-001` melalui proxy merespons `200` setelah backend dipindahkan ke port 8100.
+- Sesi simulasi `DEMO-KASUBBID-001` melalui proxy merespons `200` setelah backend dipindahkan ke port 8100.
 
 ## Perbaikan login demo
 
 Masalah login berasal dari port API yang tertukar dengan project lain. Frontend KPI sebelumnya meneruskan request ke port 8000, sedangkan port itu tidak lagi menunjuk ke backend KPI. Proxy frontend sekarang membaca `VITE_API_PROXY_TARGET` dan default ke port 8100.
 
-Sesi dummy sudah diverifikasi melalui alur CSRF dan `POST /api/v1/demo/session` dengan respons `200` untuk `DEMO-KASUBBID-001`.
+Sesi simulasi sudah diverifikasi melalui alur CSRF dan `POST /api/v1/demo/session` dengan respons `200` untuk `DEMO-KASUBBID-001`.
 
 ## Perbaikan login SSO dan user demo — 17 November 2026
 
@@ -334,7 +334,7 @@ Sesi dummy sudah diverifikasi melalui alur CSRF dan `POST /api/v1/demo/session` 
 - Laravel Pint `--test` lulus untuk `SsoLoginController` setelah pesan kegagalan TLS diperjelas.
 - `GET /sanctum/csrf-cookie` melalui proxy frontend: `204`.
 - `GET /api/v1/demo/identities` melalui proxy frontend: `200`, tepat empat user sesuai skenario.
-- Login dummy Admin KPI, Kepala Cabang, Staf Pemasaran, dan Staf Operasional melalui alur CSRF dan proxy: `200`.
+- Login simulasi Admin KPI, Kepala Cabang, Staf Pemasaran, dan Staf Operasional melalui alur CSRF dan proxy: `200`.
 - Login SSO dicoba dari browser, tetapi backend berhenti pada verifikasi TLS sebelum provider memberi respons autentikasi. Probe diagnostik tidak mengirim password atau token ke provider.
 - Sesi KPI hanya dibuat setelah `employee_id` dari SSO dipetakan pada `sso_identities`; layar pengelolaan mapping belum dibuat.
 
@@ -403,6 +403,78 @@ Token aplikasi SSO sempat terlihat di screenshot. Rotasi token pada layanan SSO 
 - Resolver issuer pada login dan pembuatan mapping memakai nilai konfigurasi yang sama; jika `SSO_ISSUER` kosong, keduanya memakai URL SSO yang dinormalisasi tanpa garis miring penutup.
 - Frontend dan backend `/up` merespons `200`. Login SSO setelah mapping belum dicoba di browser karena kredensial tetap dimasukkan lokal oleh pengguna.
 
-## Prompt lanjutan
+## Fokus MVP self-assignment — 20 November 2026
 
-Login lewat `Akun kerja SSO` secara lokal, tanpa membagikan password atau token. Pastikan profil menampilkan jabatan Staf di Divisi Operasional sekaligus akses Admin KPI, lalu cek apakah indikator Operasional pusat bisa dipilih untuk self-assignment. Pastikan grant Admin KPI tidak menampilkan aksi approve/finalisasi. Catat hasil login di `status.md`; setelah akses ganda terkonfirmasi, lanjutkan Step 28: preview dampak perubahan mapping KPI per jabatan.
+- Fokus bergeser ke staf, Kepala Sub Bidang, Kepala Cabang, dan Korwil: susun KPI sendiri lalu lihat riwayat milik sendiri.
+- Pengguna self-service hanya melihat menu `Susun KPI` dan `Riwayat saya`. Admin tetap menjadi identitas terpisah.
+- Self-assignment disimpan melalui backend sebagai kontrak `DRAFT`. Riwayat mengambil kontrak milik pengguna saja; contoh historis lintas orang dan status palsu dihapus dari layar.
+- Endpoint juga membatasi role self-service ke katalog jabatan sendiri, kontrak sendiri, dan baca riwayat. Aksi edit realisasi, komentar, pengajuan, dan review belum tersedia untuk role ini.
+- `FocusedDemoSeeder` menggantikan seeder besar sebagai default: 7 unit, 9 jabatan, 9 identitas, 15 indikator simulasi, satu siklus terbuka, tanpa kontrak awal.
+- Nama login, unit, jabatan, dan KPI tidak memakai akhiran `Demo`/`simulasi`; layar tetap menyebut data sebagai simulasi.
+
+### Berkas yang berubah
+
+- Frontend self-assignment, riwayat, navigasi, dan selector identitas: `frontend/src/routes/+page.svelte`.
+- Seeder fokus dan role access: `backend/database/seeders/FocusedDemoSeeder.php`, `backend/database/seeders/DatabaseSeeder.php`, `backend/app/Services/AccessRoleResolver.php`, serta controller API terkait.
+- Panduan setup dan seed: `README.md`, `docs/SETUP_LOCAL.md`, dan `docs/demo_seed_plan.md`.
+
+### Verifikasi
+
+- PHP Herd 8.4 berhasil memeriksa sintaks seeder, service, dan controller yang berubah.
+- Seed lokal berhasil membuat data fokus tanpa kontrak awal.
+- `GET /api/v1/demo/identities` melalui Vite merespons `200` dengan enam identitas; profil Staf, Kasubbid, Kacab, dan Korwil mengembalikan `self_assignment_available: true`.
+- Backend `/up` dan modul halaman Svelte melalui Vite merespons `200`.
+- Belum ada kontrak self-assignment dibuat saat pemeriksaan, sehingga riwayat awal tetap kosong dan siap dicoba.
+
+## Langkah berikutnya
+
+Pilih salah satu identitas self-service dari pencarian login, isi KPI yang muncul otomatis, lalu buka `Riwayat saya` untuk memastikan status dan alur review tercatat. Setelah alur ini disepakati, lanjutkan penetapan indikator per jabatan melalui Admin.
+
+## Perombakan penilaian mandiri dan skoring — 22 November 2026
+
+- KPI tampil otomatis dari jabatan aktif. Pegawai tidak memilih indikator; API membuat kontrak dari definisi KPI jabatan dan mensyaratkan minimal empat indikator.
+- Form pegawai berurutan: isi realisasi total untuk seluruh periode dan bukti, isi lima nilai perilaku umum, lalu periksa skor dan urutan penilai sebelum mengirim.
+- Skor KPI dan perilaku masing-masing berada pada rentang 0–100. Skor perilaku adalah rata-rata lima rating 1–5 yang dinormalisasi ke 100; rating 3 tetap berarti memenuhi standar. Nilai akhir dihitung dari 80% skor KPI dan 20% skor perilaku, sehingga maksimum 100. Kategori rating akhir belum ditetapkan.
+- Pratinjau kontribusi tiap KPI (skor dasar × bobot indikator) dan subtotal realisasi yang sudah dinilai diperbarui langsung saat input berubah, termasuk sebelum bukti diisi. Bukti tetap menentukan progres, bobot valid, dan kelengkapan pengajuan; subtotal parsial tidak dinormalisasi menjadi 100. Nilai akhir sementara juga dihitung dari komponen yang sudah diinput; tampil sebagai nilai akhir definitif setelah semua KPI dan lima perilaku lengkap. Rating perilaku disimpan saat pegawai melanjutkan ke Periksa.
+- Pratinjau perilaku juga menjumlahkan kontribusi rating yang sudah dipilih terhadap komponen perilaku 20%; setiap aspek berbobot sama. Nilai perilaku penuh dan nilai akhir tersedia setelah kelima aspek dinilai.
+- Siklus penilaian dan periode realisasi dipisahkan: realisasi memakai durasi yang sama tepat sebelum tanggal mulai siklus. Contoh siklus bulanan November menilai data 1–31 Oktober; untuk siklus tiga bulan mulai November, data yang dinilai Agustus–Oktober. Periode ini ditampilkan pada pengisian dan tinjauan.
+- Admin dapat membuat periode 1, 3, 6, atau 12 bulan. Nilai KPI saat ini diisi sebagai total realisasi untuk periode aktif; penggabungan otomatis data bulanan untuk KPI bisnis belum dibuat.
+- Reviewer P1/P2 diambil otomatis dari rantai supervisor pada penugasan: Kepala Bidang sebagai P1, lalu Kepala Divisi/Cabang/Korwil/Direksi sebagai P2. Slot jabatan kosong dilewati; pengajuan ditolak bila tidak ada penilai aktif sama sekali.
+- Riwayat menampilkan nama penilai, tahap aktif, keputusan, komentar, dan waktu. Pengajuan P1 berlanjut ke P2; revisi kembali ke pegawai; jika salah satu slot kosong proses tetap dapat selesai pada slot aktif.
+- Seeder fokus menyediakan empat KPI non-bisnis untuk delapan jabatan, tanpa membuat kontrak awal. Mapping KPI per jabatan dan konfigurasi hirarki reviewer melalui Admin belum tersambung ke API.
+
+### Berkas dan migrasi
+
+- Backend: `ContractController`, `ContractWorkflowController`, `KpiCycleController`, `ReviewerChainResolver`, `DemoScoreCalculator`, `AccessRoleResolver`, `PerformanceContract`, route API, `FocusedDemoSeeder`, dan migration `2026_11_22_000001_add_behavior_evaluation_to_performance_contracts.php`.
+- Frontend: `frontend/src/routes/+page.svelte` dan `frontend/src/routes/page.css`.
+- Migration skor perilaku berhasil diterapkan ke SQLite lokal melalui PHP Herd 8.4.27. Seed ulang tidak dijalankan.
+
+### Verifikasi dan server lokal
+
+- `npm.cmd run check`: lulus, 0 error dan 0 warning.
+- `npm.cmd run build`: lulus; build dibuat untuk validasi aplikasi lokal.
+- PHP lint untuk controller, service, seeder, dan migration yang berubah: lulus.
+- API Laravel aktif di `http://127.0.0.1:8100`; frontend yang sudah berjalan merespons di `http://127.0.0.1:5180`.
+
+## Pilot penilaian KCU — 22 November 2026
+
+- Cakupan seed lokal dipersempit ke KCU Utama: Admin KPI, Kepala Cabang, Kepala Bidang Operasional, Kepala Bidang Pemasaran, Kepala Sub Bidang Kredit, Account Officer Kredit, dan Teller. Tidak ada unit Jakarta.
+- Seed lokal lama yang bertanda internal dibersihkan dan diganti dengan 24 indikator: empat untuk masing-masing enam jabatan penilai/pegawai; Admin tidak mengisi KPI. Satu periode November 2026 dibuka.
+- Bobot KPI per jabatan: Kacab 35/25/20/20; Kabid Operasional 30/25/25/20; Kabid Pemasaran 35/25/20/20; Kasubbid Kredit 35/25/20/20; AO Kredit 40/20/20/20; Teller 35/25/20/20. Masing-masing berjumlah 100%.
+- Realisasi semua indikator bisnis dan non-bisnis dimasukkan manual. Sistem menghitung skor terhadap target; integrasi otomatis sumber data bisnis ditunda ke tahap berikutnya.
+- Alur reviewer cabang: AO Kredit → Kabid Pemasaran (P1) → Kepala Cabang (P2); Kasubbid Kredit dilewati dan tidak menjadi penilai. Teller → Kabid Operasional (P1) → Kepala Cabang (P2). Kepala Bidang mendapat Kepala Cabang sebagai P1; P2 dilewati bila tidak ada.
+- Uji API end-to-end berhasil untuk jalur bisnis AO Kredit (nilai akhir 99,42) dan non-bisnis Teller (nilai akhir 99,92). Keduanya menyimpan empat KPI dan lima perilaku, lanjut melalui dua penilai, lalu menjadi FINAL dengan dua keputusan pada riwayat.
+- Setelah uji selesai, seed lokal dijalankan ulang. Periode aktif kini kosong tanpa kontrak, agar penilaian dapat dicoba lagi dari awal.
+- Profil Kepala Cabang tersedia untuk meninjau penilaian; penilai untuk pengajuan mandiri Kacab masih perlu ditentukan.
+- Tampilan utama memakai profil KCU dan tidak menampilkan label dummy/simulasi/Jakarta.
+- Verifikasi terakhir: `npm.cmd run check`, `npm.cmd run build`, PHP lint, `git diff --check`; endpoint backend dan frontend lokal merespons HTTP 200.
+
+## Koreksi langsung oleh penilai P1/P2 â€” 22 November 2026
+
+- Penilai aktif dapat mengoreksi nilai realisasi pada setiap KPI langsung dari detail penilaian. Alasan koreksi wajib diisi per KPI; bukti dan catatan pegawai tetap tersimpan.
+- Penilai aktif juga dapat mengubah nilai lima perilaku. Minimal satu nilai harus berubah dan alasan koreksi perilaku wajib diisi.
+- Koreksi menghitung ulang skor tanpa mengembalikan kontrak ke pegawai. Verifikasi P1 meneruskan kontrak ke P2 bila slot tersedia; penilai terakhir menyelesaikan kontrak.
+- Perubahan angka, aktor, waktu, serta alasan tersimpan sebagai audit before/after dan tampil di riwayat tindakan.
+- Frontend: `npm.cmd run check` lulus dengan 0 error dan 0 warning. PHP lint untuk controller yang baru berubah belum dapat dijalankan dari shell ini karena executable Herd berada di luar akses workspace.
+- Reset uji Teller 22 November: satu kontrak penilaian, empat item KPI, lima keputusan reviewer, dan 21 event audit terkait dihapus dari SQLite lokal agar dapat diisi ulang.
+- Reset ulang setelah uji alur reviewer 22 November: kontrak final Teller, empat item KPI, dua keputusan reviewer, satu komentar, dan 18 event audit terkait dihapus agar uji dapat dimulai lagi.

@@ -37,8 +37,8 @@ class KpiDefinitionController extends Controller
             $query->where('position_id', $validated['position_id']);
         }
 
-        if ($hasAdminAccess && array_key_exists('draft', $validated)) {
-            $query->where('published', ! (bool) $validated['draft']);
+        if ($hasAdminAccess) {
+            $query->where('published', array_key_exists('draft', $validated) ? ! (bool) $validated['draft'] : true);
         }
 
         if (! empty($validated['search'])) {
@@ -46,10 +46,6 @@ class KpiDefinitionController extends Controller
             $query->where(fn ($builder) => $builder
                 ->where('name', 'like', '%'.$search.'%')
                 ->orWhere('code', 'like', '%'.$search.'%'));
-        }
-
-        if (array_key_exists('draft', $validated) && (bool) $validated['draft']) {
-            $query->where('published', false);
         }
 
         if (! empty($validated['group'])) {

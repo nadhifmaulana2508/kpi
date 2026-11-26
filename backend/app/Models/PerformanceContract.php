@@ -14,13 +14,14 @@ class PerformanceContract extends Model
 
     protected $fillable = [
         'id', 'cycle_id', 'subject_type', 'employee_id', 'org_unit_id', 'position_id',
-        'reviewer_employee_id', 'assignment_snapshot', 'status', 'demo_only',
+        'reviewer_employee_id', 'position_kpi_version_id', 'assignment_snapshot', 'behavior_evaluation', 'status', 'demo_only',
     ];
 
     protected function casts(): array
     {
         return [
             'assignment_snapshot' => 'array',
+            'behavior_evaluation' => 'array',
             'demo_only' => 'boolean',
         ];
     }
@@ -79,6 +80,11 @@ class PerformanceContract extends Model
     public function items(): HasMany
     {
         return $this->hasMany(ContractItem::class, 'contract_id');
+    }
+
+    public function positionKpiVersion(): BelongsTo
+    {
+        return $this->belongsTo(PositionKpiVersion::class, 'position_kpi_version_id');
     }
 
     public function comments(): HasMany

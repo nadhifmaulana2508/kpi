@@ -7,10 +7,11 @@ use App\Models\AuditEvent;
 use App\Models\ContractItem;
 use App\Models\Employee;
 use App\Models\KpiCycle;
-use App\Models\KpiDefinition;
 use App\Models\PerformanceContract;
-use App\Services\DemoScoreCalculator;
 use App\Services\AccessRoleResolver;
+use App\Services\DemoScoreCalculator;
+use App\Services\PositionKpiVersionService;
+use App\Services\ReviewerChainResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,13 +20,14 @@ use Illuminate\Support\Str;
 
 class ContractController extends Controller
 {
-    public function store(Request $request, DemoScoreCalculator $scores): JsonResponse
-    {
+    public function store(
+        Request $request,
+        DemoScoreCalculator $scores,
+        ReviewerChainResolver $reviewers,
+        PositionKpiVersionService $positionKpiVersions,
+    ): JsonResponse {
         $validated = $request->validate([
             'cycle_id' => ['nullable', 'string'],
-            'items' => ['required', 'array', 'min:1', 'max:10'],
-            'items.*.kpi_definition_id' => ['required', 'string', 'distinct'],
-            'items.*.target' => ['required', 'numeric', 'min:0'],
         ]);
 
         /** @var Employee $employee */
@@ -36,22 +38,21 @@ class ContractController extends Controller
             ->firstOrFail();
 
         abort_unless(
-            in_array($assignment->position->access_role, ['PEGAWAI', 'KEPALA_SUB_BIDANG'], true),
+            in_array($assignment->position->access_role, ['PEGAWAI', 'KEPALA_SUB_BIDANG', 'KEPALA_BIDANG'], true),
             403,
-            'Self-assignment hanya tersedia untuk staf dan kepala sub bidang.',
+            'Penilaian mandiri belum tersedia untuk jabatan ini.',
         );
 
         $cycleQuery = KpiCycle::query()
             ->where('demo_only', true)
-            ->where('cadence', 'MONTHLY')
             ->where('status', 'OPEN');
 
         if (! empty($validated['cycle_id'])) {
             $cycleQuery->whereKey($validated['cycle_id']);
         }
 
-        $cycle = $cycleQuery->orderByDesc('starts_at')->first();
-        abort_if(! $cycle, 409, 'Belum ada siklus KPI bulanan yang terbuka.');
+        $cycle = $cycleQuery->orderByDesc('starts_at')->orderByDesc('created_at')->first();
+        abort_if(! $cycle, 409, 'Admin belum membuka periode penilaian.');
 
         $existing = PerformanceContract::query()
             ->demoOnly()
@@ -60,52 +61,24 @@ class ContractController extends Controller
             ->first();
         abort_if($existing, 409, 'Kontrak untuk siklus ini sudah tersedia.');
 
-        $definitionIds = collect($validated['items'])
-            ->pluck('kpi_definition_id')
-            ->all();
-        $definitions = KpiDefinition::query()
-            ->where('demo_only', true)
-            ->where('published', true)
-            ->where('position_id', $assignment->position_id)
-            ->whereIn('id', $definitionIds)
-            ->get()
-            ->keyBy('id');
+        $positionKpiVersion = $positionKpiVersions->versionForCyclePosition($cycle, $assignment->position);
+        abort_if(! $positionKpiVersion, 422, 'Admin belum menetapkan indikator KPI untuk jabatan Anda.');
 
-        abort_if(
-            $definitions->count() !== count($definitionIds),
-            422,
-            'Pilih KPI aktif yang memang tersedia untuk jabatan demo Anda.',
-        );
+        $versionItems = $positionKpiVersion->items->sortBy('sort_order')->values();
+        abort_if($versionItems->isEmpty(), 422, 'Paket KPI jabatan belum memiliki indikator.');
 
-        $items = collect($validated['items']);
-        $catalogWeightTotal = $definitions->sum(fn (KpiDefinition $definition): float => (float) $definition->weight);
-        abort_if($catalogWeightTotal <= 0, 422, 'Katalog KPI belum memiliki bobot standar yang valid.');
+        $weightTotal = $versionItems->sum(fn ($item): float => (float) $item->weight);
+        abort_if(abs($weightTotal - 1.0) >= 0.0001, 422, 'Total bobot paket KPI jabatan harus 100%.');
 
-        $normalizedWeights = [];
-        $assignedWeight = 0.0;
-
-        foreach ($items->values() as $index => $item) {
-            $definition = $definitions->get($item['kpi_definition_id']);
-            $target = (float) $item['target'];
-
+        foreach ($versionItems as $versionItem) {
+            $definition = $versionItem->definition;
+            $target = (float) $versionItem->target;
             abort_if($definition->score_type === 'Z' && $target !== 0.0, 422, 'Tipe Z memakai target 0.');
             abort_if($definition->score_type !== 'Z' && $target <= 0, 422, 'Target KPI harus lebih dari 0.');
             abort_if(in_array($definition->score_type, ['Q', 'L'], true) && $target > 100, 422, 'Tipe Q/L memakai skala sampai 100.');
-
-            $catalogWeight = (float) $definition->weight;
-            abort_if($catalogWeight <= 0, 422, 'Setiap KPI harus memiliki bobot standar lebih dari 0.');
-
-            $isLastItem = $index === $items->count() - 1;
-            $normalizedWeight = $isLastItem
-                ? round(1.0 - $assignedWeight, 4)
-                : round($catalogWeight / $catalogWeightTotal, 4);
-            abort_if($normalizedWeight <= 0, 422, 'Bobot KPI tidak dapat dinormalisasi.');
-
-            $normalizedWeights[$definition->id] = $normalizedWeight;
-            $assignedWeight += $normalizedWeight;
         }
 
-        $contract = DB::transaction(function () use ($employee, $assignment, $cycle, $items, $definitions, $normalizedWeights): PerformanceContract {
+        $contract = DB::transaction(function () use ($employee, $assignment, $cycle, $positionKpiVersion, $versionItems, $reviewers): PerformanceContract {
             $contract = PerformanceContract::query()->create([
                 'id' => 'DEMO-CONTRACT-SELF-'.Str::uuid(),
                 'cycle_id' => $cycle->id,
@@ -113,6 +86,7 @@ class ContractController extends Controller
                 'employee_id' => $employee->id,
                 'org_unit_id' => $assignment->org_unit_id,
                 'position_id' => $assignment->position_id,
+                'position_kpi_version_id' => $positionKpiVersion->id,
                 'reviewer_employee_id' => null,
                 'assignment_snapshot' => [
                     'employee_id' => $employee->id,
@@ -120,14 +94,28 @@ class ContractController extends Controller
                     'position_name' => $assignment->position->name,
                     'org_unit_id' => $assignment->org_unit_id,
                     'org_unit_name' => $assignment->orgUnit->name,
-                    'reviewer_assignment' => 'Menunggu penentuan alur reviewer.',
+                    'kpi_package_version' => [
+                        'id' => $positionKpiVersion->id,
+                        'version' => $positionKpiVersion->version,
+                        'items' => $versionItems->map(fn ($item): array => [
+                            'definition_id' => $item->kpi_definition_id,
+                            'code' => $item->definition->code,
+                            'name' => $item->definition->name,
+                            'score_type' => $item->definition->score_type,
+                            'unit' => $item->definition->unit,
+                            'target' => (float) $item->target,
+                            'weight' => (float) $item->weight,
+                        ])->all(),
+                    ],
+                    'reviewer_assignment' => 'Penilai ditentukan dari hirarki jabatan saat pengajuan.',
                 ],
+                'behavior_evaluation' => null,
                 'status' => 'DRAFT',
                 'demo_only' => true,
             ]);
 
-            foreach ($items as $index => $item) {
-                $definition = $definitions->get($item['kpi_definition_id']);
+            foreach ($versionItems as $index => $versionItem) {
+                $definition = $versionItem->definition;
                 ContractItem::query()->create([
                     'id' => $contract->id.'-ITEM-'.str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT),
                     'contract_id' => $contract->id,
@@ -136,8 +124,8 @@ class ContractController extends Controller
                     'name' => $definition->name,
                     'score_type' => $definition->score_type,
                     'unit' => $definition->unit,
-                    'target' => $item['target'],
-                    'weight' => $normalizedWeights[$definition->id],
+                    'target' => $versionItem->target,
+                    'weight' => $versionItem->weight,
                     'actual' => null,
                     'state' => 'PENDING',
                 ]);
@@ -151,9 +139,30 @@ class ContractController extends Controller
                 'before_state' => null,
                 'after_state' => [
                     'cycle_id' => $cycle->id,
-                    'kpi_definition_ids' => $items->pluck('kpi_definition_id')->all(),
+                    'position_kpi_version_id' => $positionKpiVersion->id,
+                    'position_kpi_version' => $positionKpiVersion->version,
+                    'kpi_definition_ids' => $versionItems->pluck('kpi_definition_id')->all(),
                 ],
             ]);
+
+            $contract->load('employee');
+            $resolvedSlots = $reviewers->resolve($contract);
+            $slotSnapshot = [];
+            foreach (['P1', 'P2'] as $slot) {
+                $reviewer = $resolvedSlots[$slot];
+                $slotSnapshot[$slot] = [
+                    'employee_id' => $reviewer?->id,
+                    'name' => $reviewer?->display_name,
+                    'position_name' => $reviewer?->activeAssignment()->demoOnly()->with('position')->first()?->position?->name,
+                    'state' => $reviewer ? 'READY' : 'SKIPPED',
+                ];
+            }
+            $snapshot = $contract->assignment_snapshot ?? [];
+            $snapshot['reviewer_slots'] = $slotSnapshot;
+            $snapshot['active_reviewer_slots'] = collect($resolvedSlots)->filter()->keys()->values()->all();
+            $snapshot['current_reviewer_slot'] = null;
+            $contract->assignment_snapshot = $snapshot;
+            $contract->save();
 
             return $contract->fresh(['employee', 'position', 'orgUnit', 'reviewer', 'items', 'comments.actor']);
         });
@@ -179,7 +188,7 @@ class ContractController extends Controller
 
         $query = PerformanceContract::query()
             ->demoOnly()
-            ->with(['employee', 'position', 'orgUnit', 'reviewer', 'items', 'comments.actor']);
+            ->with(['employee', 'position', 'orgUnit', 'reviewer', 'items', 'comments.actor', 'reviewEvents.reviewer']);
 
         if (! $hasAdminAccess) {
             $query->where(fn (Builder $visible) => $visible
@@ -220,7 +229,7 @@ class ContractController extends Controller
     {
         $record = PerformanceContract::query()
             ->demoOnly()
-            ->with(['employee', 'position', 'orgUnit', 'reviewer', 'items', 'comments.actor'])
+            ->with(['employee', 'position', 'orgUnit', 'reviewer', 'items', 'comments.actor', 'reviewEvents.reviewer'])
             ->findOrFail($contract);
 
         /** @var Employee $employee */
@@ -240,10 +249,13 @@ class ContractController extends Controller
     public function serialize(PerformanceContract $contract, DemoScoreCalculator $scores): array
     {
         $score = $scores->calculate($contract);
+        $contract->loadMissing('reviewEvents.reviewer');
+        $reviewerSlots = data_get($contract->assignment_snapshot, 'reviewer_slots', []);
 
         return [
             'id' => $contract->id,
             'cycle_id' => $contract->cycle_id,
+            'created_at' => $contract->created_at?->toISOString(),
             'subject_type' => $contract->subject_type,
             'subject_id' => $contract->employee_id ?? $contract->org_unit_id,
             'employee_name' => $contract->employee?->display_name,
@@ -251,7 +263,28 @@ class ContractController extends Controller
             'org_unit_name' => $contract->orgUnit?->name ?? '',
             'status' => $contract->status,
             'reviewer_employee_id' => $contract->reviewer_employee_id,
+            'position_kpi_version' => data_get($contract->assignment_snapshot, 'kpi_package_version.version'),
             'assignment_snapshot' => $contract->assignment_snapshot,
+            'behavior_evaluation' => $contract->behavior_evaluation,
+            'review_workflow' => [
+                'reviewer_slots' => $reviewerSlots,
+                'active_slots' => data_get($contract->assignment_snapshot, 'active_reviewer_slots', []),
+                'current_slot' => data_get($contract->assignment_snapshot, 'current_reviewer_slot'),
+            ],
+            'review_history' => $contract->reviewEvents
+                ->sortBy('created_at')
+                ->map(function ($event) use ($reviewerSlots): array {
+                    $slot = collect($reviewerSlots)->search(fn ($reviewer) => ($reviewer['employee_id'] ?? null) === $event->reviewer_employee_id);
+
+                    return [
+                        'reviewer_employee_id' => $event->reviewer_employee_id,
+                        'reviewer_name' => $event->reviewer?->display_name ?? 'Penilai tidak aktif',
+                        'slot' => $slot === false ? null : $slot,
+                        'decision' => $event->decision,
+                        'comment' => $event->comment,
+                        'created_at' => $event->created_at?->toISOString(),
+                    ];
+                })->values(),
             'items' => $contract->items->map(fn ($item) => [
                 'id' => $item->id,
                 'kpi_definition_id' => $item->kpi_definition_id,
@@ -268,11 +301,11 @@ class ContractController extends Controller
                 'state' => $item->state,
                 'reason' => $item->reason,
             ])->values(),
-            'behavior_evaluation' => null,
+            'behavior_evaluation' => $contract->behavior_evaluation,
             'comments' => $contract->comments->map(fn ($comment) => [
                 'id' => $comment->id,
                 'actor_employee_id' => $comment->actor_employee_id,
-                'actor_name' => $comment->actor?->display_name ?? 'Identitas demo',
+                'actor_name' => $comment->actor?->display_name ?? 'Identitas pegawai',
                 'item_id' => $comment->item_id,
                 'message' => $comment->message,
                 'created_at' => $comment->created_at?->toISOString(),

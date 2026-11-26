@@ -1,20 +1,55 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import {
+		Bell,
+		BookOpenText,
+		BriefcaseBusiness,
+		CalendarDays,
+		ChartNoAxesColumnIncreasing,
+		ClipboardCheck,
+		FileClock,
+		GitBranch,
+		History,
+		Info,
+		LayoutDashboard,
+		Link2,
+		ListPlus,
+		Menu,
+		UserRound
+	} from '@lucide/svelte';
 	import { api, ApiError } from '#lib/api.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as Card from '#lib/components/ui/card/index.js';
+	import ThemeToggle from '#lib/components/theme-toggle.svelte';
+	import WorkspaceSidebar, { type WorkspaceNavigationSection } from '#lib/components/workspace-sidebar.svelte';
 	import './page.css';
+	import './workspace.css';
 	let isDark = $state(false);
+	let sidebarCollapsed = $state(false);
+	let mobileSidebarOpen = $state(false);
 	onMount(() => {
 		const savedTheme = localStorage.getItem('kpi-theme');
 		isDark = savedTheme ? savedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
 		document.documentElement.classList.toggle('dark', isDark);
+		sidebarCollapsed = localStorage.getItem('kpi-sidebar-collapsed') === 'true';
 	});
 	function toggleTheme(): void {
 		isDark = !isDark;
 		document.documentElement.classList.toggle('dark', isDark);
 		localStorage.setItem('kpi-theme', isDark ? 'dark' : 'light');
+	}
+	function toggleSidebarCollapsed(): void {
+		sidebarCollapsed = !sidebarCollapsed;
+		localStorage.setItem('kpi-sidebar-collapsed', String(sidebarCollapsed));
+	}
+	function closeMobileSidebar(): void {
+		mobileSidebarOpen = false;
+	}
+	function handleWindowKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape' && mobileSidebarOpen) {
+			closeMobileSidebar();
+		}
 	}
 
 	type DemoIdentity = {
@@ -82,7 +117,10 @@
 	type PeriodStatus = 'DRAFT' | 'OPEN' | 'CLOSED';
 	type StaffTrackKind = 'BUSINESS' | 'NON_BUSINESS';
 	type StaffTrack = StaffTrackKind | null;
+	type StaffWorkspaceTab = 'KPI' | 'BEHAVIOR' | 'APPROVAL' | 'HISTORY';
 	type SelfAssessmentStep = 1 | 2 | 3;
+	type BehaviorKey = 'integrity' | 'service' | 'teamwork' | 'compliance' | 'responsibility';
+	type BehaviorEvaluation = { ratings: Record<BehaviorKey, number> } | null;
 	type DemoPeriod = {
 		id: string;
 		name: string;
@@ -115,6 +153,8 @@
 		submittedDate: string | null;
 		note: string;
 		items: HistoryItem[];
+		review_workflow: PerformanceContract['review_workflow'];
+		review_history: PerformanceContract['review_history'];
 		reviewerName?: string | null;
 		submittedAt?: string | null;
 	};
@@ -282,6 +322,37 @@
 		draft: boolean;
 		demo_only: boolean;
 	};
+	type PositionKpiVersionItem = {
+		definition_id: string;
+		code: string;
+		name: string;
+		score_type: 'A' | 'Q' | 'L' | 'Z';
+		definition: string;
+		unit: string;
+		target: number;
+		weight_percent: number;
+		source_note: string;
+		quality_flag: boolean;
+		application_note: string;
+	};
+	type PositionKpiVersion = {
+		id: string;
+		position_id: string;
+		position_name: string;
+		version: number;
+		status: 'ACTIVE' | 'ARCHIVED';
+		created_at: string | null;
+		items: PositionKpiVersionItem[];
+	};
+	type PositionKpiSetting = {
+		id: string;
+		name: string;
+		group_name: string;
+		access_role: string;
+		active_version_id: string | null;
+		versions: PositionKpiVersion[];
+	};
+	type PositionKpiDraftItem = PositionKpiVersionItem & { client_id: string };
 	type Dashboard = {
 		cycle: Cycle;
 		counts: { total_contracts: number; ready_contracts: number; submitted_contracts: number };
@@ -325,6 +396,16 @@
 		before: Record<string, unknown> | null;
 		after: Record<string, unknown> | null;
 	};
+	type AdminAuditLogEvent = AuditEvent & {
+		actor_position_name: string | null;
+		actor_org_unit_name: string | null;
+	};
+	type AdminAuditLogPage = {
+		data: AdminAuditLogEvent[];
+		meta: { page: number; per_page: number; total: number; last_page: number };
+	};
+	type WorkspaceView = 'overview' | 'mine' | 'reviews' | 'assignment' | 'periods' | 'history' | 'monitoring' | 'catalog' | 'mapping' | 'positionKpis' | 'positions' | 'ssoMappings' | 'audit' | 'comparison' | 'auditLog';
+	type AuditMenuKey = WorkspaceView | 'mine-kpi' | 'mine-behavior' | 'mine-approval' | 'mine-history';
 	type ScoreSummary = {
 		kpi_score: number | null;
 		behavior_score: number | null;
@@ -338,108 +419,43 @@
 	type PerformanceContract = {
 		id: string;
 		cycle_id: string;
+		created_at?: string | null;
 		subject_type: string;
 		subject_id: string;
 		employee_name: string | null;
 		position_name: string | null;
+		position_kpi_version?: number | null;
 		org_unit_name: string;
 		status: 'DRAFT' | 'SUBMITTED' | 'REVISION' | 'VERIFIED' | 'FINAL';
 		reviewer_employee_id: string | null;
+		behavior_evaluation: BehaviorEvaluation;
+		review_workflow?: {
+			reviewer_slots: Record<'P1' | 'P2', { employee_id: string | null; name: string | null; position_name: string | null; state: 'READY' | 'SKIPPED' }>;
+			active_slots: Array<'P1' | 'P2'>;
+			current_slot: 'P1' | 'P2' | null;
+		};
+		review_history?: Array<{ reviewer_employee_id: string; reviewer_name: string; slot: 'P1' | 'P2' | null; decision: string; comment: string; created_at: string | null }>;
 		items: ContractItem[];
 		comments: ContractComment[];
 		score: ScoreSummary | null;
 	};
+	type NumericDraft = string | number | null | undefined;
 	type EditItem = {
-		actual: string;
+		actual: NumericDraft;
 		evidence: string;
 		note: string;
-		target: string;
-		weightPercent: string;
+		target: NumericDraft;
+		weightPercent: NumericDraft;
 		reason: string;
 	};
 	type Envelope<T> = { data: T };
-
-	function demoHistoryForTrack(track: StaffTrackKind): AssessmentHistoryEntry[] {
-		const business = track === 'BUSINESS';
-		const prefix = business ? 'P' : 'O';
-		const names = business
-			? ['Akuisisi dana demo', 'Realisasi kredit demo', 'Kualitas portofolio demo']
-			: ['SLA layanan operasional demo', 'Akurasi dokumen demo', 'Penyelesaian transaksi demo'];
-		const units = business ? ['rekening', 'juta rupiah', '%'] : ['menit', '%', 'transaksi'];
-		const makeItems = (actuals: string[], scores: Array<number | null>): HistoryItem[] =>
-			names.map((name, index) => ({
-				code: `DEMO-${prefix}-${String(index + 1).padStart(2, '0')}`,
-				name,
-				target: business ? ['100', '50', '95'][index] : ['30', '98', '120'][index],
-				actual: actuals[index] ?? 'Belum diisi',
-				score: scores[index] ?? null,
-				unit: units[index]
-			}));
-		const reviewer = 'Kepala Cabang Demo 001';
-
-		return [
-			{
-				id: `DEMO-HISTORY-${prefix}-001`,
-				track,
-				periodName: 'Triwulan II 2026',
-				cadence: '3 bulan',
-				startsAt: '2026-04-01',
-				endsAt: '2026-06-30',
-				status: 'FINAL',
-				score: business ? 88.4 : 91.2,
-				reviewer,
-				finalDate: '2026-07-15',
-				submittedDate: '2026-07-08',
-				note: 'Contoh penilaian final untuk melihat bentuk histori yang sudah terkunci.',
-				items: makeItems(business ? ['118', '56', '96'] : ['28', '99', '126'], business ? [90, 86, 89] : [94, 92, 88])
-			},
-			{
-				id: `DEMO-HISTORY-${prefix}-002`,
-				track,
-				periodName: 'Triwulan III 2026',
-				cadence: '3 bulan',
-				startsAt: '2026-07-01',
-				endsAt: '2026-09-30',
-				status: 'REVISION',
-				score: business ? 76.2 : 82.1,
-				reviewer,
-				finalDate: null,
-				submittedDate: '2026-10-08',
-				note: 'Reviewer meminta penjelasan tambahan pada indikator yang belum didukung bukti lengkap.',
-				items: makeItems(business ? ['91', '42', '88'] : ['33', '96', '110'], business ? [78, 74, 76] : [84, 81, 81])
-			},
-			{
-				id: `DEMO-HISTORY-${prefix}-003`,
-				track,
-				periodName: 'Triwulan IV 2026',
-				cadence: '3 bulan',
-				startsAt: '2026-10-01',
-				endsAt: '2026-12-31',
-				status: 'SUBMITTED',
-				score: null,
-				reviewer,
-				finalDate: null,
-				submittedDate: '2026-11-08',
-				note: 'Self-assessment sudah diajukan dan menunggu pemeriksaan reviewer.',
-				items: makeItems(business ? ['105', '48', '94'] : ['31', '98', '119'], [null, null, null])
-			},
-			{
-				id: `DEMO-HISTORY-${prefix}-004`,
-				track,
-				periodName: 'Rencana Semester I 2027',
-				cadence: '6 bulan',
-				startsAt: '2027-01-01',
-				endsAt: '2027-06-30',
-				status: 'DRAFT',
-				score: null,
-				reviewer: null,
-				finalDate: null,
-				submittedDate: null,
-				note: 'Draf contoh yang masih dapat diubah sebelum diajukan.',
-				items: makeItems(['Belum diisi', 'Belum diisi', 'Belum diisi'], [null, null, null])
-			}
-		];
-	}
+	const behaviorCriteria: Array<{ key: BehaviorKey; label: string }> = [
+		{ key: 'integrity', label: 'Integritas' },
+		{ key: 'service', label: 'Orientasi layanan' },
+		{ key: 'teamwork', label: 'Kerja sama' },
+		{ key: 'compliance', label: 'Kepatuhan kerja' },
+		{ key: 'responsibility', label: 'Tanggung jawab' }
+	];
 
 	function demoReviewItems(track: StaffTrackKind, variant: 'first' | 'second'): HistoryItem[] {
 		const business = track === 'BUSINESS';
@@ -499,7 +515,6 @@
 	let identitiesLoading = $state(true);
 	let identitiesError = $state('');
 	let selectedIdentityId = $state('');
-	let identitySearch = $state('');
 	let loginMode = $state<'SSO' | 'DEMO'>('SSO');
 	let ssoEmployeeId = $state('');
 	let ssoPassword = $state('');
@@ -512,15 +527,26 @@
 	let catalogLoaded = $state(false);
 	let contracts = $state<PerformanceContract[]>([]);
 	let selectedContract = $state<PerformanceContract | null>(null);
+	let staffWorkspaceTab = $state<StaffWorkspaceTab>('KPI');
 	let assessmentStep = $state<SelfAssessmentStep>(1);
+	let behaviorDraft = $state<Partial<Record<BehaviorKey, string>>>({});
+	let behaviorRevisionComment = $state('');
 	let auditEvents = $state<AuditEvent[]>([]);
 	let auditLoadFailed = $state(false);
+	let adminAuditEvents = $state<AdminAuditLogEvent[]>([]);
+	let adminAuditMeta = $state<AdminAuditLogPage['meta']>({ page: 1, per_page: 50, total: 0, last_page: 1 });
+	let adminAuditLoading = $state(false);
+	let adminAuditFailed = $state(false);
+	let adminAuditSearch = $state('');
+	let adminAuditAction = $state('');
+	let adminAuditFrom = $state('');
+	let adminAuditTo = $state('');
 	let edits = $state<Record<string, EditItem>>({});
 	let loading = $state(true);
 	let busy = $state(false);
 	let errorMessage = $state('');
 	let successMessage = $state('');
-	let view = $state<'overview' | 'mine' | 'reviews' | 'assignment' | 'periods' | 'history' | 'monitoring' | 'catalog' | 'mapping' | 'positions' | 'ssoMappings' | 'audit' | 'comparison'>('overview');
+	let view = $state<WorkspaceView>('overview');
 	let selectedHistoryId = $state('');
 	let reviewTrackFilter = $state<ReviewTrackFilter>('ALL');
 	let reviewStatusFilter = $state<ReviewStatusFilter>('ALL');
@@ -556,6 +582,11 @@
 	let assignmentTargetDrafts = $state<Record<string, string>>({});
 	let assignmentWeightDrafts = $state<Record<string, string>>({});
 	let assignmentSaveState = $state<AssignmentSaveState>('DRAFT');
+	let positionKpiSettings = $state<PositionKpiSetting[]>([]);
+	let positionKpiSettingsLoading = $state(false);
+	let positionKpiSettingsBusy = $state(false);
+	let selectedPositionKpiId = $state('');
+	let positionKpiDraftItems = $state<PositionKpiDraftItem[]>([]);
 	let selectedPositionId = $state('POS-STAFF-BUSINESS');
 	let positionEditorOpen = $state(false);
 	let positionEditorMode = $state<'CREATE' | 'EDIT'>('CREATE');
@@ -587,7 +618,8 @@
 	let periodCadenceMonths = $state(3);
 	let periodStartDate = $state('2026-11-01');
 	let periodStatus = $state<PeriodStatus>('DRAFT');
-	let periodNotes = $state('');
+	let configuredPeriods = $state<DemoPeriod[]>([]);
+	let cycleStatusDrafts = $state<Record<string, PeriodStatus>>({});
 	let demoPeriods = $state<DemoPeriod[]>([
 		{
 			id: 'DEMO-PERIOD-001',
@@ -614,10 +646,6 @@
 			status: 'DRAFT'
 		}
 	]);
-	const demoAssessmentHistory: AssessmentHistoryEntry[] = [
-		...demoHistoryForTrack('BUSINESS'),
-		...demoHistoryForTrack('NON_BUSINESS')
-	];
 	const demoReviewTasks: DemoReviewTask[] = [
 		...demoReviewTasksForTrack('BUSINESS'),
 		...demoReviewTasksForTrack('NON_BUSINESS')
@@ -727,7 +755,7 @@
 			id: 'DEMO-AUDIT-P-001',
 			track: 'BUSINESS',
 			status: 'VERIFIED',
-			actorName: 'Kepala Cabang Demo 001',
+			actorName: 'Kepala Cabang',
 			actorRole: 'Reviewer / Kepala Cabang',
 			actedAt: '2026-11-12T09:15:00+07:00',
 			employeeName: 'Pemasaran Demo 001',
@@ -736,7 +764,7 @@
 			note: 'Target, realisasi, dan bukti demo sudah diperiksa. Snapshot siap masuk proses finalisasi Admin.',
 			items: demoReviewItems('BUSINESS', 'first'),
 			score: 86.1,
-			reviewerName: 'Kepala Cabang Demo 001',
+			reviewerName: 'Kepala Cabang',
 			submittedAt: '2026-11-11',
 			finalDate: null
 		},
@@ -744,7 +772,7 @@
 			id: 'DEMO-AUDIT-P-003',
 			track: 'BUSINESS',
 			status: 'VERIFIED',
-			actorName: 'Kepala Cabang Demo 001',
+			actorName: 'Kepala Cabang',
 			actorRole: 'Reviewer / Kepala Cabang',
 			actedAt: '2026-11-12T14:20:00+07:00',
 			employeeName: 'Pemasaran Demo 003',
@@ -753,7 +781,7 @@
 			note: 'Penilaian diverifikasi setelah target dan bukti capaian melewati pemeriksaan reviewer.',
 			items: demoReviewItems('BUSINESS', 'first'),
 			score: 89.2,
-			reviewerName: 'Kepala Cabang Demo 001',
+			reviewerName: 'Kepala Cabang',
 			submittedAt: '2026-11-05',
 			finalDate: null
 		},
@@ -761,7 +789,7 @@
 			id: 'DEMO-AUDIT-P-002',
 			track: 'BUSINESS',
 			status: 'FINAL',
-			actorName: 'Admin KPI Demo 001',
+			actorName: 'Admin KPI',
 			actorRole: 'Admin KPI / SDM',
 			actedAt: '2026-11-13T15:20:00+07:00',
 			employeeName: 'Pemasaran Demo 002',
@@ -770,7 +798,7 @@
 			note: 'Snapshot dikunci setelah verifikasi reviewer. Tidak ada perubahan lanjutan pada periode ini.',
 			items: demoReviewItems('BUSINESS', 'second'),
 			score: 86.1,
-			reviewerName: 'Kepala Cabang Demo 001',
+			reviewerName: 'Kepala Cabang',
 			submittedAt: '2026-11-08',
 			finalDate: '2026-11-13'
 		},
@@ -778,7 +806,7 @@
 			id: 'DEMO-AUDIT-O-001',
 			track: 'NON_BUSINESS',
 			status: 'VERIFIED',
-			actorName: 'Kepala Cabang Demo 001',
+			actorName: 'Kepala Cabang',
 			actorRole: 'Reviewer / Kepala Cabang',
 			actedAt: '2026-11-11T13:40:00+07:00',
 			employeeName: 'Operasional Demo 001',
@@ -787,7 +815,7 @@
 			note: 'Bukti layanan dan rekonsiliasi demo sesuai dengan catatan proses operasional.',
 			items: demoReviewItems('NON_BUSINESS', 'first'),
 			score: 91.3,
-			reviewerName: 'Kepala Cabang Demo 001',
+			reviewerName: 'Kepala Cabang',
 			submittedAt: '2026-11-09',
 			finalDate: null
 		},
@@ -795,7 +823,7 @@
 			id: 'DEMO-AUDIT-O-002',
 			track: 'NON_BUSINESS',
 			status: 'FINAL',
-			actorName: 'Admin KPI Demo 001',
+			actorName: 'Admin KPI',
 			actorRole: 'Admin KPI / SDM',
 			actedAt: '2026-11-12T16:05:00+07:00',
 			employeeName: 'Operasional Demo 002',
@@ -804,7 +832,7 @@
 			note: 'Finalisasi demo selesai. Snapshot menjadi referensi read-only untuk histori penilaian.',
 			items: demoReviewItems('NON_BUSINESS', 'second'),
 			score: 90.4,
-			reviewerName: 'Kepala Cabang Demo 001',
+			reviewerName: 'Kepala Cabang',
 			submittedAt: '2026-11-08',
 			finalDate: '2026-11-12'
 		}
@@ -824,7 +852,7 @@
 		}
 	];
 	let demoCatalogItems = $state<DemoCatalogItem[]>([
-		{ id: 'DEMO-CATALOG-P-001', code: 'DEMO-P-01', name: 'Akuisisi dana demo', track: 'BUSINESS', group: 'Dana', type: 'Q', unit: 'rekening', target: 100, weight: 0.2, dataSource: 'Rekap core demo', state: 'ACTIVE', demoOnly: true },
+		{ id: 'DEMO-CATALOG-P-001', code: 'DEMO-P-01', name: 'Akuisisi dana demo', track: 'BUSINESS', group: 'Dana', type: 'Q', unit: 'rekening', target: 100, weight: 0.2, dataSource: 'Rekap sistem operasional', state: 'ACTIVE', demoOnly: true },
 		{ id: 'DEMO-CATALOG-P-002', code: 'DEMO-P-02', name: 'Realisasi kredit demo', track: 'BUSINESS', group: 'Kredit', type: 'Q', unit: 'juta rupiah', target: 50, weight: 0.2, dataSource: 'Laporan kredit demo', state: 'ACTIVE', demoOnly: true },
 		{ id: 'DEMO-CATALOG-P-003', code: 'DEMO-P-03', name: 'Kualitas portofolio demo', track: 'BUSINESS', group: 'Kualitas', type: 'Q', unit: '%', target: 95, weight: 0.2, dataSource: 'Monitoring kualitas demo', state: 'ACTIVE', demoOnly: true },
 		{ id: 'DEMO-CATALOG-P-004', code: 'DEMO-P-04', name: 'Penyelesaian remedial demo', track: 'BUSINESS', group: 'Remedial', type: 'Q', unit: 'akun', target: 30, weight: 0.15, dataSource: 'Log remedial demo', state: 'DRAFT', demoOnly: true },
@@ -860,7 +888,7 @@
 			id: 'POS-STAFF-BUSINESS',
 			name: 'Staf Pemasaran',
 			level: 'Staf',
-			orgUnitName: 'Cabang Contoh 001',
+			orgUnitName: 'KCU Utama',
 			scopeLabel: 'Jalur dana, kredit, dan remedial',
 			track: 'BUSINESS',
 			status: 'ACTIVE',
@@ -873,7 +901,7 @@
 			id: 'POS-STAFF-NON-BUSINESS',
 			name: 'Staf Operasional',
 			level: 'Staf',
-			orgUnitName: 'Cabang Contoh 001',
+			orgUnitName: 'KCU Utama',
 			scopeLabel: 'Jalur layanan dan backoffice',
 			track: 'NON_BUSINESS',
 			status: 'ACTIVE',
@@ -925,7 +953,7 @@
 			id: 'POS-KEPALA-CABANG',
 			name: 'Kepala Cabang',
 			level: 'Pimpinan unit',
-			orgUnitName: 'Cabang Contoh 001',
+			orgUnitName: 'KCU Utama',
 			scopeLabel: 'Ringkasan kinerja cabang lintas jalur',
 			track: 'BOTH',
 			status: 'ACTIVE',
@@ -959,7 +987,10 @@
 		CONTRACT_VERIFIED: 'Kontrak diverifikasi',
 		CONTRACT_REVISION: 'Kontrak dikembalikan untuk revisi',
 		CONTRACT_FINAL: 'Kontrak difinalisasi',
-		CONTRACT_ITEM_UPDATED: 'Item kontrak diperbarui'
+		CONTRACT_ITEM_UPDATED: 'Item kontrak diperbarui',
+		CONTRACT_ITEM_REVISED: 'Nilai KPI dikoreksi penilai',
+		BEHAVIOR_EVALUATION_UPDATED: 'Nilai perilaku diperbarui',
+		BEHAVIOR_EVALUATION_REVISED: 'Nilai perilaku dikoreksi penilai'
 	};
 	const periodStatusNames: Record<PeriodStatus, string> = {
 		DRAFT: 'Draft',
@@ -978,7 +1009,11 @@
 		if (!startValue || !cadence) return '';
 		const [year, month, day] = startValue.split('-').map(Number);
 		if (![year, month, day].every(Number.isFinite)) return '';
-		const end = new Date(year, month - 1 + cadence, day);
+		const nextMonthIndex = month - 1 + cadence;
+		const nextYear = year + Math.floor(nextMonthIndex / 12);
+		const nextMonth = nextMonthIndex % 12;
+		const nextDay = Math.min(day, new Date(nextYear, nextMonth + 1, 0).getDate());
+		const end = new Date(nextYear, nextMonth, nextDay);
 		end.setDate(end.getDate() - 1);
 		return [end.getFullYear(), String(end.getMonth() + 1).padStart(2, '0'), String(end.getDate()).padStart(2, '0')].join('-');
 	}
@@ -992,8 +1027,81 @@
 		}).format(new Date(value + 'T00:00:00'));
 	}
 
+	function shiftIsoDateByMonths(value: string, monthOffset: number): string {
+		const [year, month, day] = value.split('-').map(Number);
+		if (![year, month, day].every(Number.isFinite)) return '';
+		const monthIndex = year * 12 + month - 1 + monthOffset;
+		const targetYear = Math.floor(monthIndex / 12);
+		const targetMonth = ((monthIndex % 12) + 12) % 12;
+		const targetDay = Math.min(day, new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate());
+		return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+	}
+
+	function shiftIsoDateByDays(value: string, dayOffset: number): string {
+		const date = new Date(`${value}T00:00:00Z`);
+		if (Number.isNaN(date.getTime())) return '';
+		date.setUTCDate(date.getUTCDate() + dayOffset);
+		return date.toISOString().slice(0, 10);
+	}
+
+	function measurementPeriodRange(startDate: string, cadenceMonths: number): string {
+		if (!startDate || !cadenceMonths) return '';
+		const measurementStart = shiftIsoDateByMonths(startDate, -cadenceMonths);
+		const measurementEnd = shiftIsoDateByDays(startDate, -1);
+		return measurementStart && measurementEnd
+			? `${periodDateLabel(measurementStart)} s.d. ${periodDateLabel(measurementEnd)}`
+			: '';
+	}
+
+	function cycleCadenceMonths(cycle: Cycle | null): number {
+		if (!cycle) return 0;
+		return cycle.cadence === 'QUARTERLY' ? 3 : cycle.cadence === 'SEMIANNUAL' ? 6 : cycle.cadence === 'ANNUAL' ? 12 : 1;
+	}
+
+	function cycleMeasurementRange(cycle: Cycle | null): string {
+		if (!cycle) return '';
+		return measurementPeriodRange(cycle.starts_at, cycleCadenceMonths(cycle));
+	}
+
+	function cycleMeasurementDates(cycle: Cycle | null): { startsAt: string; endsAt: string } {
+		if (!cycle) return { startsAt: '', endsAt: '' };
+		const cadenceMonths = cycleCadenceMonths(cycle);
+		return {
+			startsAt: shiftIsoDateByMonths(cycle.starts_at, -cadenceMonths),
+			endsAt: shiftIsoDateByDays(cycle.starts_at, -1)
+		};
+	}
+
+	function cycleMeasurementLabel(cycle: Cycle | null): string {
+		if (!cycle) return '';
+		const cadenceMonths = cycleCadenceMonths(cycle);
+		const { startsAt, endsAt } = cycleMeasurementDates(cycle);
+		const monthYearLabel = (value: string) => new Intl.DateTimeFormat('id-ID', {
+			month: 'long',
+			year: 'numeric'
+		}).format(new Date(`${value}T00:00:00`));
+		if (!startsAt || !endsAt) return '';
+		return cadenceMonths === 1 ? monthYearLabel(startsAt) : `${monthYearLabel(startsAt)} – ${monthYearLabel(endsAt)}`;
+	}
+
+	function contractMeasurementRange(contract: PerformanceContract): string {
+		return cycleMeasurementRange(cycles.find((cycle) => cycle.id === contract.cycle_id) ?? null);
+	}
+
 	function periodCadenceLabel(months: number): string {
 		return periodCadenceNames[months] ?? `${months} bulan`;
+	}
+
+	function cycleToPeriod(cycle: Cycle): DemoPeriod {
+		const cadenceMonths = cycle.cadence === 'QUARTERLY' ? 3 : cycle.cadence === 'SEMIANNUAL' ? 6 : cycle.cadence === 'ANNUAL' ? 12 : 1;
+		return {
+			id: cycle.id,
+			name: cycle.name,
+			cadenceMonths,
+			startsAt: cycle.starts_at,
+			endsAt: cycle.ends_at,
+			status: cycle.status as PeriodStatus
+		};
 	}
 
 	function selectedAdminPeriod(): DemoPeriod | null {
@@ -1006,7 +1114,7 @@
 
 	function selectedAdminPeriodDateRange(): string {
 		const period = selectedAdminPeriod();
-		return period ? `${periodDateLabel(period.startsAt)} - ${periodDateLabel(period.endsAt)}` : 'Seluruh periode demo';
+		return period ? `${periodDateLabel(period.startsAt)} - ${periodDateLabel(period.endsAt)}` : 'Seluruh periode';
 	}
 
 	function periodMatchesAdminFilter(periodName: string): boolean {
@@ -1019,17 +1127,32 @@
 		return 'Konfigurasi masih dapat diperiksa sebelum periode dibuka.';
 	}
 
-	function selectDemoPeriod(period: DemoPeriod): void {
-		periodName = period.name;
-		periodCadenceMonths = period.cadenceMonths;
-		periodStartDate = period.startsAt;
-		periodStatus = period.status;
-		periodNotes = '';
-		successMessage = '';
-		errorMessage = '';
+	function setCycleStatusDraft(cycleId: string, status: PeriodStatus): void {
+		cycleStatusDrafts = { ...cycleStatusDrafts, [cycleId]: status };
 	}
 
-	function saveDemoPeriod(): void {
+	async function saveCycleStatus(period: DemoPeriod): Promise<void> {
+		const status = cycleStatusDrafts[period.id] ?? period.status;
+		if (status === period.status) return;
+
+		errorMessage = '';
+		successMessage = '';
+		busy = true;
+		try {
+			await api<Envelope<Cycle>>(`/api/v1/cycles/${encodeURIComponent(period.id)}`, {
+				method: 'PATCH',
+				body: JSON.stringify({ status })
+			});
+			await refreshWorkspace();
+			successMessage = `${period.name} diubah menjadi ${periodStatusNames[status]}.`;
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Status periode belum diperbarui.';
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function saveDemoPeriod(): Promise<void> {
 		errorMessage = '';
 		successMessage = '';
 		if (!periodName.trim()) {
@@ -1041,60 +1164,61 @@
 			return;
 		}
 
-		const nextNumber = demoPeriods.length + 1;
-		const savedPeriod: DemoPeriod = {
-			id: `DEMO-PERIOD-${String(nextNumber).padStart(3, '0')}`,
-			name: periodName.trim(),
-			cadenceMonths: periodCadenceMonths,
-			startsAt: periodStartDate,
-			endsAt: periodEndDateInput(),
-			status: periodStatus
-		};
-		demoPeriods = [savedPeriod, ...demoPeriods];
-		successMessage = `${savedPeriod.name} disimpan sebagai ${periodStatusNames[savedPeriod.status].toLowerCase()} di data demo.`;
+		busy = true;
+		try {
+			const response = await api<Envelope<Cycle>>('/api/v1/cycles', {
+				method: 'POST',
+				body: JSON.stringify({
+					name: periodName.trim(),
+					cadence_months: periodCadenceMonths,
+					starts_at: periodStartDate,
+					status: periodStatus
+				})
+			});
+			const savedPeriod = cycleToPeriod(response.data);
+			await refreshWorkspace();
+			successMessage = `${savedPeriod.name} tersimpan untuk ${periodCadenceLabel(savedPeriod.cadenceMonths)}.`;
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Periode belum tersimpan.';
+		} finally {
+			busy = false;
+		}
 	}
 
 	const demoIdentityGroups: Omit<DemoIdentityGroup, 'identities'>[] = [
 		{
 			key: 'admin',
-			label: 'Admin KPI',
-			description: 'Pengaturan KPI dan pemantauan demo.',
+			label: 'Administrasi',
+			description: 'Pengelolaan periode penilaian.',
 			ids: ['DEMO-SDM-001']
 		},
 		{
-			key: 'pusat',
-			label: 'Pusat · Divisi Operasional',
-			description: 'Staf Sistem dan Jaringan TI dengan akses self-assignment dan Admin KPI demo.',
-			ids: ['DEMO-STAF-PUSAT-001']
+			key: 'pimpinan',
+			label: 'KCU Utama · Pimpinan',
+			description: 'Kepala Cabang dan Kepala Bidang.',
+			ids: ['DEMO-KACAB-001', 'DEMO-KABID-OPS-001', 'DEMO-KABID-001']
 		},
 		{
-			key: 'cabang',
-			label: 'Cabang contoh 001',
-			description: 'Kepala Cabang, Pemasaran, dan Operasional.',
-			ids: ['DEMO-KACAB-001', 'DEMO-PEMASARAN-001', 'DEMO-OPERASIONAL-001']
+			key: 'kredit',
+			label: 'KCU Utama · Kredit',
+			description: 'Kepala Sub Bidang Kredit dan Account Officer Kredit.',
+			ids: ['DEMO-KASUBBID-001', 'DEMO-AO-KREDIT-001']
+		},
+		{
+			key: 'operasional',
+			label: 'KCU Utama · Operasional',
+			description: 'Bidang Operasional dan Teller.',
+			ids: ['DEMO-OPERASIONAL-001']
 		}
 	];
 
-	function visibleIdentityGroups(): DemoIdentityGroup[] {
-		const query = identitySearch.trim().toLocaleLowerCase('id-ID');
+	function availableIdentityGroups(): DemoIdentityGroup[] {
 		return demoIdentityGroups
 			.map((group) => ({
 				...group,
 				identities: group.ids
 					.map((id) => identities.find((identity) => identity.id === id))
-					.filter((identity): identity is DemoIdentity => {
-						if (!identity) return false;
-						const content = [
-							identity.display_name,
-							identity.id,
-							identity.access_role,
-							...identity.access_roles,
-							identity.org_unit_name
-						]
-							.join(' ')
-							.toLocaleLowerCase('id-ID');
-						return !query || content.includes(query);
-					})
+					.filter((identity): identity is DemoIdentity => Boolean(identity))
 			}))
 			.filter((group) => group.identities.length > 0);
 	}
@@ -1112,7 +1236,7 @@
 			if (!identities.some((identity) => identity.id === selectedIdentityId)) selectedIdentityId = '';
 		} catch (error) {
 			identities = [];
-			identitiesError = error instanceof Error ? error.message : 'Daftar user demo belum dapat dimuat.';
+		identitiesError = error instanceof Error ? error.message : 'Daftar profil pegawai belum dapat dimuat.';
 		} finally {
 			identitiesLoading = false;
 		}
@@ -1159,12 +1283,16 @@
 	}
 
 	function canSelfAssignRole(): boolean {
-		return ['PEGAWAI', 'KEPALA_SUB_BIDANG'].includes(currentUser?.access_role ?? '');
+		return ['PEGAWAI', 'KEPALA_SUB_BIDANG', 'KEPALA_BIDANG'].some(hasAccessRole);
+	}
+
+	function canReviewAssignedContracts(): boolean {
+		return ['KEPALA_SUB_BIDANG', 'KEPALA_BIDANG', 'KEPALA_CABANG'].some(hasAccessRole);
 	}
 
 	function staffTrack(): StaffTrack {
 		const context = `${currentUser?.org_unit_name ?? ''} ${currentUser?.position_name ?? ''}`.toLocaleLowerCase('id-ID');
-		if (context.includes('pemasaran')) return 'BUSINESS';
+		if (context.includes('pemasaran') || context.includes('kredit') || context.includes('account officer')) return 'BUSINESS';
 		if (context.includes('operasional') || context.includes('backoffice')) return 'NON_BUSINESS';
 		return null;
 	}
@@ -1176,9 +1304,9 @@
 	}
 
 	function staffTrackDescription(): string {
-		if (staffTrack() === 'BUSINESS') return 'Pilih KPI demo yang menggambarkan dana, kredit, remedial, dan aktivitas nasabah.';
-		if (staffTrack() === 'NON_BUSINESS') return 'Pilih KPI demo yang menggambarkan layanan operasional, backoffice, dokumen, dan kepatuhan proses.';
-		return 'Pilih indikator yang tersedia untuk jabatan dan unit Anda.';
+		if (staffTrack() === 'BUSINESS') return 'KPI mengikuti jabatan aktif dan indikator yang ditetapkan Admin.';
+		if (staffTrack() === 'NON_BUSINESS') return 'KPI mengikuti jabatan aktif dan indikator yang ditetapkan Admin.';
+		return 'Isi realisasi dan lampirkan bukti untuk setiap indikator jabatan.';
 	}
 
 	function staffAssignmentKey(): string {
@@ -1187,50 +1315,8 @@
 		return `${currentUser.employee_id}:${track}`;
 	}
 
-	function currentStaffAssignmentRecord(): DemoStaffAssignment | null {
-		const key = staffAssignmentKey();
-		return key ? staffAssignmentRecords[key] ?? null : null;
-	}
-
 	function staffReviewTaskId(key = staffAssignmentKey()): string {
 		return key ? `DEMO-SUBMISSION-${key.replace(/[^A-Z0-9]+/gi, '-')}` : '';
-	}
-
-	function currentStaffReviewDecision(): DemoReviewDecision | null {
-		const taskId = staffReviewTaskId();
-		return taskId ? demoReviewDecisions[taskId] ?? null : null;
-	}
-
-	function staffReviewDecisionForKey(key: string): DemoReviewDecision | null {
-		const taskId = staffReviewTaskId(key);
-		return taskId ? demoReviewDecisions[taskId] ?? null : null;
-	}
-
-	function staffFinalizationForKey(key: string): DemoStaffFinalization | null {
-		const taskId = staffReviewTaskId(key);
-		return taskId ? demoStaffFinalizations[taskId] ?? null : null;
-	}
-
-	function currentStaffFinalization(): DemoStaffFinalization | null {
-		const key = staffAssignmentKey();
-		return key ? staffFinalizationForKey(key) : null;
-	}
-
-	function effectiveStaffAssignmentStatus(record: DemoStaffAssignment | null, key = staffAssignmentKey()): StaffAssignmentStatus {
-		if (!record) return 'NONE';
-		if (record.status === 'SUBMITTED' && staffFinalizationForKey(key)) return 'FINAL';
-		if (record.status === 'SUBMITTED' && staffReviewDecisionForKey(key)?.decision === 'VERIFIED') return 'VERIFIED';
-		if (record.status === 'SUBMITTED' && staffReviewDecisionForKey(key)?.decision === 'REVISION') return 'REVISION';
-		return record.status;
-	}
-
-	function staffAssignmentStatusLabel(): string {
-		if (staffAssignmentStatus === 'SUBMITTED') return 'SUBMITTED · Menunggu reviewer';
-		if (staffAssignmentStatus === 'REVISION') return 'REVISION · Perlu diperbaiki';
-		if (staffAssignmentStatus === 'DRAFT') return 'DRAFT · Belum diajukan';
-		if (staffAssignmentStatus === 'VERIFIED') return 'VERIFIED - Diverifikasi reviewer';
-		if (staffAssignmentStatus === 'FINAL') return 'FINAL - Snapshot terkunci';
-		return 'Belum disimpan';
 	}
 
 	function staffAssignmentSnapshotItems(): HistoryItem[] {
@@ -1263,7 +1349,7 @@
 				track,
 				employeeName: currentUser.display_name,
 				positionName: currentUser.position_name,
-				periodName: activeMonthlyCycle()?.name ?? 'Periode demo aktif',
+				periodName: activeMonthlyCycle()?.name ?? 'Periode aktif',
 				items: staffAssignmentSnapshotItems()
 			}
 		};
@@ -1290,7 +1376,7 @@
 		}
 		const key = staffAssignmentKey();
 		if (!key) {
-			errorMessage = 'Identitas staf belum tersedia untuk pengajuan demo.';
+			errorMessage = 'Identitas pegawai belum tersedia untuk pengajuan.';
 			return;
 		}
 		const previous = staffAssignmentRecords[key];
@@ -1302,9 +1388,9 @@
 				savedAt: previous?.savedAt ?? new Date().toISOString(),
 				submittedAt: new Date().toISOString(),
 				track: previous?.track ?? staffTrack() ?? 'BUSINESS',
-				employeeName: previous?.employeeName ?? currentUser?.display_name ?? 'Staf demo',
+				employeeName: previous?.employeeName ?? currentUser?.display_name ?? 'Pegawai',
 				positionName: previous?.positionName ?? currentUser?.position_name ?? 'Staf cabang',
-				periodName: previous?.periodName ?? activeMonthlyCycle()?.name ?? 'Periode demo aktif',
+				periodName: previous?.periodName ?? activeMonthlyCycle()?.name ?? 'Periode aktif',
 				items: staffAssignmentSnapshotItems()
 			}
 		};
@@ -1315,65 +1401,55 @@
 			demoReviewDecisions = nextDecisions;
 		}
 		staffAssignmentStatus = 'SUBMITTED';
-		successMessage = 'Self-assessment demo diajukan. Pilihan KPI terkunci sampai reviewer memberi keputusan.';
-	}
-
-	function definitionDisplayName(definition: KpiDefinition): string {
-		const businessNames = [
-			'Akuisisi dana demo',
-			'Realisasi kredit demo',
-			'Kualitas portofolio demo',
-			'Penyelesaian remedial demo',
-			'Kepatuhan proses demo',
-			'Aktivitas nasabah demo'
-		];
-		const operationalNames = [
-			'SLA layanan operasional demo',
-			'Akurasi dokumen demo',
-			'Penyelesaian transaksi demo',
-			'Kualitas layanan backoffice demo',
-			'Kepatuhan prosedur demo',
-			'Kesiapan rekonsiliasi demo'
-		];
-		const index = Number(definition.code.match(/(\d+)$/)?.[1] ?? 0) - 1;
-		const names = staffTrack() === 'NON_BUSINESS' ? operationalNames : businessNames;
-		return names[index] ?? definition.name;
+		successMessage = 'Penilaian diajukan. Pilihan KPI terkunci sampai reviewer memberi keputusan.';
 	}
 
 	function canViewStaffHistory(): boolean {
-		return currentUser?.access_role === 'PEGAWAI' && staffTrack() !== null;
-	}
-
-	function currentStaffHistoryEntry(): AssessmentHistoryEntry | null {
-		const record = currentStaffAssignmentRecord();
-		const key = staffAssignmentKey();
-		if (!record || !key || record.status !== 'SUBMITTED') return null;
-		const decision = staffReviewDecisionForKey(key);
-		const finalization = staffFinalizationForKey(key);
-		const cycle = activeMonthlyCycle();
-		const status = finalization ? 'FINAL' : decision?.decision === 'VERIFIED' ? 'VERIFIED' : decision?.decision === 'REVISION' ? 'REVISION' : 'SUBMITTED';
-		return {
-			id: `DEMO-LIVE-HISTORY-${key.replace(/[^A-Z0-9]+/gi, '-')}`,
-			track: record.track,
-			periodName: record.periodName,
-			cadence: '1 bulan',
-			startsAt: cycle?.starts_at ?? '2026-11-01',
-			endsAt: cycle?.ends_at ?? '2026-11-30',
-			status,
-			score: null,
-			reviewer: decision ? 'Kepala Cabang Demo 001' : null,
-			finalDate: finalization?.finalizedAt.slice(0, 10) ?? null,
-			submittedDate: record.submittedAt?.slice(0, 10) ?? record.savedAt.slice(0, 10),
-			note: finalization?.note ?? decision?.note ?? 'Self-assessment sudah diajukan dan menunggu pemeriksaan reviewer.',
-			items: record.items
-		};
+		return canSelfAssignRole();
 	}
 
 	function visibleHistoryEntries(): AssessmentHistoryEntry[] {
-		const track = staffTrack();
-		const entries = demoAssessmentHistory.filter((entry) => track === null || entry.track === track);
-		const liveEntry = currentStaffHistoryEntry();
-		return liveEntry ? [liveEntry, ...entries] : entries;
+		if (!currentUser) return [];
+		return contracts
+			.filter((contract) => contract.subject_id === currentUser?.employee_id)
+			.map((contract) => {
+				const cycle = cycles.find((item) => item.id === contract.cycle_id);
+				const measurementPeriod = cycleMeasurementDates(cycle ?? null);
+				return {
+					id: contract.id,
+					track: staffTrack() ?? 'NON_BUSINESS',
+					periodName: cycleMeasurementLabel(cycle ?? null) || cycle?.name || 'Periode tidak tersedia',
+					cadence: cycle ? periodCadenceLabel(cycleCadenceMonths(cycle)) : 'Periode',
+					startsAt: measurementPeriod.startsAt || cycle?.starts_at || '',
+					endsAt: measurementPeriod.endsAt || cycle?.ends_at || '',
+					status: contract.status,
+					score: contract.score?.final_score ?? null,
+					reviewer: contract.review_workflow?.current_slot
+						? contract.review_workflow.reviewer_slots[contract.review_workflow.current_slot]?.name ?? null
+						: contract.review_history?.at(-1)?.reviewer_name ?? null,
+					finalDate: null,
+					submittedDate: contract.created_at?.slice(0, 10) ?? null,
+					note: contract.status === 'DRAFT'
+						? 'Penilaian tersimpan sebagai draf.'
+						: contract.status === 'SUBMITTED'
+							? `Menunggu Penilai ${contract.review_workflow?.current_slot?.slice(1) ?? 'berikutnya'}.`
+							: contract.status === 'REVISION'
+								? 'Penilaian dikembalikan untuk diperbaiki.'
+								: 'Riwayat penilaian periode Anda.',
+					review_workflow: contract.review_workflow,
+					review_history: contract.review_history,
+					items: contract.items.map((item) => ({
+						code: item.code,
+						name: item.name,
+						target: String(item.target),
+						actual: item.actual === null ? 'Belum diisi' : String(item.actual),
+						score: item.score,
+						unit: item.unit,
+						note: item.note
+					}))
+				};
+			})
+			.sort((a, b) => b.startsAt.localeCompare(a.startsAt));
 	}
 
 	function selectedHistory(): AssessmentHistoryEntry | null {
@@ -1387,7 +1463,7 @@
 	}
 
 	function canReviewInbox(): boolean {
-		return currentUser?.access_role === 'KEPALA_CABANG';
+		return false;
 	}
 
 	function submittedStaffReviewTasks(): DemoReviewTask[] {
@@ -1473,12 +1549,12 @@
 				decision,
 				note,
 				savedAt: new Date().toISOString(),
-				actorName: currentUser?.display_name ?? 'Reviewer Demo',
+				actorName: currentUser?.display_name ?? 'Reviewer',
 				actorRole: currentUser ? roleNames[currentUser.access_role] ?? currentUser.access_role : 'Reviewer / Kepala Cabang'
 			}
 		};
 		errorMessage = '';
-		successMessage = decision === 'VERIFIED' ? 'State demo: kontrak ditandai terverifikasi.' : 'State demo: kontrak ditandai perlu revisi.';
+		successMessage = decision === 'VERIFIED' ? 'Penilaian ditandai terverifikasi.' : 'Penilaian dikembalikan untuk revisi.';
 	}
 
 	function saveDemoFinalization(): void {
@@ -1505,12 +1581,12 @@
 			[task.id]: {
 				note,
 				finalizedAt: new Date().toISOString(),
-				actorName: currentUser?.display_name ?? 'Admin KPI Demo 001',
+				actorName: currentUser?.display_name ?? 'Admin KPI',
 				actorRole: currentUser ? roleNames[currentUser.access_role] ?? currentUser.access_role : 'Admin KPI / SDM'
 			}
 		};
 		errorMessage = '';
-		successMessage = 'State demo: penilaian difinalisasi dan snapshot dikunci.';
+		successMessage = 'Penilaian difinalisasi dan snapshot dikunci.';
 	}
 
 	function reviewTrackLabel(track: StaffTrackKind): string {
@@ -1670,7 +1746,7 @@
 				periodName: entry.periodName,
 				status: entry.status,
 				score: entry.score ?? auditSnapshotScore(entry.items),
-				reviewerName: entry.reviewerName ?? (entry.status === 'FINAL' ? 'Kepala Cabang Demo 001' : entry.actorName),
+				reviewerName: entry.reviewerName ?? (entry.status === 'FINAL' ? 'Kepala Cabang' : entry.actorName),
 				submittedAt: entry.submittedAt ?? (entry.status === 'VERIFIED' ? entry.actedAt : null),
 				finalDate: entry.finalDate ?? (entry.status === 'FINAL' ? entry.actedAt : null)
 			};
@@ -1841,7 +1917,7 @@
 				demoOnly: true
 			}
 		];
-		successMessage = `${name} ditambahkan sebagai data katalog dummy.`;
+		successMessage = `${name} ditambahkan sebagai contoh katalog.`;
 		resetCatalogForm();
 	}
 
@@ -1933,7 +2009,7 @@
 		const evenWeight = String(Math.round((100 / selected.length) * 100) / 100);
 		assignmentWeightDrafts = Object.fromEntries(selected.map((item) => [item.id, evenWeight]));
 		assignmentSaveState = 'DRAFT';
-		successMessage = 'Bobot dummy dibagi rata untuk preview penetapan.';
+		successMessage = 'Bobot contoh dibagi rata untuk preview penetapan.';
 		errorMessage = '';
 	}
 
@@ -1967,7 +2043,7 @@
 				savedAt: new Date().toISOString()
 			}
 		};
-		successMessage = `Penetapan dummy jalur ${catalogTrackLabel(assignmentTrack)} tersimpan untuk preview self-assignment.`;
+		successMessage = `Penetapan simulasi jalur ${catalogTrackLabel(assignmentTrack)} tersimpan untuk preview self-assignment.`;
 	}
 
 	function canManageAssignment(): boolean {
@@ -1975,8 +2051,146 @@
 	}
 
 	function openAssignmentMapping(): void {
-		setView('mapping');
-		seedAssignmentForTrack('BUSINESS');
+		setView('positionKpis');
+		void loadPositionKpiSettings();
+	}
+
+	function selectedPositionKpiSetting(): PositionKpiSetting | null {
+		return positionKpiSettings.find((position) => position.id === selectedPositionKpiId) ?? null;
+	}
+
+	function activePositionKpiVersion(position: PositionKpiSetting | null): PositionKpiVersion | null {
+		if (!position?.active_version_id) return null;
+		return position.versions.find((version) => version.id === position.active_version_id) ?? null;
+	}
+
+	function seedPositionKpiDraft(position: PositionKpiSetting | null): void {
+		const activeVersion = activePositionKpiVersion(position);
+		positionKpiDraftItems = (activeVersion?.items ?? []).map((item) => ({
+			...item,
+			client_id: item.definition_id
+		}));
+	}
+
+	async function loadPositionKpiSettings(): Promise<void> {
+		positionKpiSettingsLoading = true;
+		errorMessage = '';
+		try {
+			const response = await api<Envelope<PositionKpiSetting[]>>('/api/v1/position-kpi-settings');
+			positionKpiSettings = response.data;
+			const selected = response.data.find((position) => position.id === selectedPositionKpiId)
+				?? response.data.find((position) => position.access_role === 'PEGAWAI')
+				?? response.data[0]
+				?? null;
+			selectedPositionKpiId = selected?.id ?? '';
+			seedPositionKpiDraft(selected);
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Paket KPI jabatan belum dapat dimuat.';
+		} finally {
+			positionKpiSettingsLoading = false;
+		}
+	}
+
+	function selectPositionKpiSetting(positionId: string): void {
+		selectedPositionKpiId = positionId;
+		seedPositionKpiDraft(selectedPositionKpiSetting());
+		positionKpiDraftItems = [...positionKpiDraftItems];
+	}
+
+	function addPositionKpiDraftItem(): void {
+		const position = selectedPositionKpiSetting();
+		if (!position) return;
+		const nextNumber = positionKpiDraftItems.length + 1;
+		positionKpiDraftItems = [...positionKpiDraftItems, {
+			client_id: `new-${crypto.randomUUID()}`,
+			definition_id: '',
+			code: `KPI-${String(nextNumber).padStart(2, '0')}`,
+			name: '',
+			score_type: 'A',
+			definition: '',
+			unit: '',
+			target: 1,
+			weight_percent: 0,
+			source_note: '',
+			quality_flag: false,
+			application_note: ''
+		}];
+	}
+
+	function updatePositionKpiDraftItem(
+		clientId: string,
+		field: 'code' | 'name' | 'score_type' | 'definition' | 'unit' | 'target' | 'weight_percent' | 'source_note',
+		value: string,
+	): void {
+		positionKpiDraftItems = positionKpiDraftItems.map((item) => {
+			if (item.client_id !== clientId) return item;
+			if (field === 'score_type') {
+				const scoreType = value as PositionKpiVersionItem['score_type'];
+				return { ...item, score_type: scoreType, quality_flag: scoreType === 'Q', target: scoreType === 'Z' ? 0 : item.target };
+			}
+			if (field === 'target' || field === 'weight_percent') {
+				return { ...item, [field]: Number(value) };
+			}
+			return { ...item, [field]: value };
+		});
+	}
+
+	function removePositionKpiDraftItem(clientId: string): void {
+		positionKpiDraftItems = positionKpiDraftItems.filter((item) => item.client_id !== clientId);
+	}
+
+	function positionKpiWeightTotal(): number {
+		return positionKpiDraftItems.reduce((total, item) => total + (Number(item.weight_percent) || 0), 0);
+	}
+
+	function positionKpiSaveBlockedReason(): string | null {
+		if (positionKpiDraftItems.length === 0) return 'Tambahkan minimal satu indikator untuk jabatan ini.';
+		if (positionKpiDraftItems.some((item) => !item.code.trim() || !item.name.trim() || !item.definition.trim() || !item.unit.trim())) {
+			return 'Kode, nama, keterangan, dan satuan wajib diisi.';
+		}
+		if (new Set(positionKpiDraftItems.map((item) => item.code.trim().toLowerCase())).size !== positionKpiDraftItems.length) {
+			return 'Kode indikator tidak boleh duplikat dalam satu paket.';
+		}
+		if (positionKpiDraftItems.some((item) => !Number.isFinite(item.target) || (item.score_type === 'Z' ? item.target !== 0 : item.target <= 0) || (['Q', 'L'].includes(item.score_type) && item.target > 100))) {
+			return 'Target indikator belum sesuai dengan jenis pengukurannya.';
+		}
+		if (positionKpiDraftItems.some((item) => !Number.isFinite(item.weight_percent) || item.weight_percent <= 0)) {
+			return 'Bobot setiap indikator harus lebih besar dari 0%.';
+		}
+		if (Math.abs(positionKpiWeightTotal() - 100) >= 0.011) return 'Total bobot seluruh indikator harus 100%.';
+		return null;
+	}
+
+	async function savePositionKpiSettings(): Promise<void> {
+		const position = selectedPositionKpiSetting();
+		const blockedReason = positionKpiSaveBlockedReason();
+		if (!position || blockedReason) {
+			errorMessage = blockedReason ?? 'Pilih jabatan yang akan diatur.';
+			return;
+		}
+
+		positionKpiSettingsBusy = true;
+		errorMessage = '';
+		successMessage = '';
+		try {
+			const response = await api<Envelope<PositionKpiVersion>>(`/api/v1/position-kpi-settings/${encodeURIComponent(position.id)}`, {
+				method: 'PUT',
+				body: JSON.stringify({
+					items: positionKpiDraftItems.map(({ client_id, ...item }) => ({
+						...item,
+						definition_id: item.definition_id || null
+					}))
+				})
+			});
+			successMessage = response.data.version > 0
+				? `Paket KPI ${position.name} tersimpan sebagai V${response.data.version}.`
+				: `Paket KPI ${position.name} tersimpan.`;
+			await loadPositionKpiSettings();
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Paket KPI jabatan belum dapat disimpan.';
+		} finally {
+			positionKpiSettingsBusy = false;
+		}
 	}
 
 	function canManagePositions(): boolean {
@@ -2079,7 +2293,7 @@
 	}
 
 	function positionEditorTitle(): string {
-		return positionEditorMode === 'CREATE' ? 'Tambah jabatan dummy' : 'Edit jabatan dummy';
+		return positionEditorMode === 'CREATE' ? 'Tambah jabatan' : 'Edit jabatan';
 	}
 
 	function positionFormCatalogItems(): DemoCatalogItem[] {
@@ -2105,7 +2319,7 @@
 		positionEditorId = '';
 		positionFormName = '';
 		positionFormLevel = 'Staf';
-		positionFormOrgUnit = 'Cabang Contoh 001';
+		positionFormOrgUnit = 'KCU Utama';
 		positionFormScope = '';
 		positionFormTrack = 'BUSINESS';
 		positionFormStatus = 'ACTIVE';
@@ -2274,24 +2488,6 @@
 		return positionMappingItems(position).length > 0 ? 'MAPPED' : 'EMPTY';
 	}
 
-	function currentStaffPositionMapping(): DemoPositionMapping | null {
-		if (currentUser?.access_role !== 'PEGAWAI') return null;
-		if (currentUser.position_name.toLocaleLowerCase('id-ID').includes('sistem dan jaringan ti')) {
-			return demoPositionMappings.find((position) => position.id === 'POS-STAFF-PUSAT-OPS') ?? null;
-		}
-		const track = staffTrack();
-		if (track === 'BUSINESS') return demoPositionMappings.find((position) => position.id === 'POS-STAFF-BUSINESS') ?? null;
-		if (track === 'NON_BUSINESS') return demoPositionMappings.find((position) => position.id === 'POS-STAFF-NON-BUSINESS') ?? null;
-		return null;
-	}
-
-	function staffAssignmentMappingState(): 'ACTIVE_MAPPED' | 'ACTIVE_EMPTY' | 'INACTIVE' | 'UNAVAILABLE' {
-		const position = currentStaffPositionMapping();
-		if (!position) return 'UNAVAILABLE';
-		if (position.status !== 'ACTIVE') return 'INACTIVE';
-		return positionMappingItems(position).length > 0 ? 'ACTIVE_MAPPED' : 'ACTIVE_EMPTY';
-	}
-
 	function demoDefinitionFromPositionMapping(item: DemoCatalogItem, position: DemoPositionMapping): KpiDefinition {
 		return {
 			id: item.id,
@@ -2311,11 +2507,39 @@
 		};
 	}
 
-	async function openMine(): Promise<void> {
+	function openMine(): void {
 		setView('mine');
 		if (!canViewStaffHistory()) return;
-		const contract = existingMonthlyContract();
-		if (contract) await openContract(contract.id);
+		staffWorkspaceTab = 'KPI';
+		assessmentStep = 1;
+		selectedContract = null;
+		errorMessage = '';
+	}
+
+	async function selectStaffWorkspaceTab(tab: StaffWorkspaceTab): Promise<void> {
+		const previousTab = staffWorkspaceTab;
+		if (
+			tab === 'APPROVAL' &&
+			selectedContract &&
+			isBranchSelfAssessment() &&
+			behaviorRatingsCompletedCount() === behaviorCriteria.length &&
+			behaviorDraftDirty() &&
+			!(await saveBehaviorEvaluation())
+		) {
+			staffWorkspaceTab = 'BEHAVIOR';
+			return;
+		}
+		staffWorkspaceTab = tab;
+		assessmentStep = tab === 'KPI' ? 1 : tab === 'BEHAVIOR' ? 2 : 3;
+		if (tab !== previousTab) {
+			const menuKeys: Record<StaffWorkspaceTab, AuditMenuKey> = {
+				KPI: 'mine-kpi',
+				BEHAVIOR: 'mine-behavior',
+				APPROVAL: 'mine-approval',
+				HISTORY: 'mine-history'
+			};
+			void recordMenuAccess(menuKeys[tab], menuKeys[previousTab]);
+		}
 	}
 
 	function historyTrackLabel(track: StaffTrackKind): string {
@@ -2323,47 +2547,58 @@
 	}
 
 	function staffDashboardContract(): PerformanceContract | null {
-		return existingMonthlyContract();
+		const cycle = staffDashboardCycle();
+		return cycle ? existingContractForCycle(cycle) : null;
+	}
+
+	function staffDashboardCycle(): Cycle | null {
+		return openInputCycles()[0] ?? null;
+	}
+
+	function staffDashboardPeriodLabel(): string {
+		return staffDashboardCycle()?.name ?? 'Tidak ada periode terbuka';
 	}
 
 	function staffDashboardProgress(): { completed: number; total: number; percent: number } {
 		const contract = staffDashboardContract();
-		const total = contract?.items.length || 6;
+		const total = contract?.items.length ?? 0;
 		const completed = contract?.items.filter((item) => ['VALID', 'NOT_APPLICABLE'].includes(item.state)).length ?? 0;
 		return { completed, total, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
 	}
 
 	function staffDashboardAssignmentLabel(): string {
 		const contract = staffDashboardContract();
-		if (!contract) return 'Belum disusun';
+		if (!contract) return staffDashboardCycle() ? 'Wajib diisi' : 'Tidak ada periode terbuka';
 		return statusNames[contract.status] ?? contract.status;
 	}
 
 	function staffDashboardAssignmentDetail(): string {
 		const contract = staffDashboardContract();
-		if (!contract) return 'Pilih KPI dari katalog untuk memulai self-assignment.';
+		if (!contract) {
+			const cycle = staffDashboardCycle();
+			return cycle ? `Admin membuka ${cycle.name}; KPI mengikuti jabatan aktif Anda.` : 'Periode pengisian akan tampil setelah Admin membukanya.';
+		}
 		if (contract.status === 'REVISION') return 'Ada catatan reviewer yang perlu diselesaikan.';
-		if (contract.status === 'SUBMITTED') return 'Self-assignment sudah diajukan dan menunggu reviewer.';
-		if (contract.status === 'FINAL') return 'Penilaian sudah final untuk periode aktif.';
+		if (contract.status === 'SUBMITTED') return `Penilaian menunggu ${contract.review_workflow?.current_slot ?? 'penilai'}.`;
 		return 'Draf tersimpan; lengkapi indikator sebelum diajukan.';
 	}
 
 	function staffDashboardTaskLabel(): string {
 		const contract = staffDashboardContract();
-		if (!contract) return 'Susun self-assignment';
+		if (!contract) return staffDashboardCycle() ? 'Isi KPI yang dibuka' : 'Belum ada tugas input';
 		if (contract.status === 'REVISION') return 'Perbaiki KPI yang dikembalikan';
 		if (contract.status === 'DRAFT') return 'Lengkapi target dan bukti';
 		if (contract.status === 'SUBMITTED') return 'Menunggu keputusan reviewer';
-		return 'Tidak ada tugas mendesak';
+		return 'Tidak ada tugas input';
 	}
 
 	function staffDashboardTaskDetail(): string {
 		const contract = staffDashboardContract();
-		if (!contract) return 'Mulai dari katalog KPI jalur kerja Anda.';
+		if (!contract) return staffDashboardCycle() ? 'Buka periode dari daftar untuk mulai mengisi KPI jabatan.' : 'Periode yang dibuka Admin akan muncul di daftar KPI Anda.';
 		if (contract.status === 'REVISION') return 'Buka KPI saya untuk membaca catatan dan mengirim perbaikan.';
-		if (contract.status === 'DRAFT') return 'Isi realisasi dan bukti pada setiap indikator yang dipilih.';
+		if (contract.status === 'DRAFT') return 'Isi realisasi dan bukti pada KPI jabatan yang sudah terpasang.';
 		if (contract.status === 'SUBMITTED') return 'Tidak ada input yang perlu dilakukan sampai reviewer mengirim keputusan.';
-		return 'Periode aktif tidak membutuhkan tindakan baru.';
+		return 'Penilaian ini tidak lagi memerlukan input.';
 	}
 
 	function staffDashboardRealizationSummary(): string {
@@ -2377,24 +2612,6 @@
 		return visibleHistoryEntries()[0] ?? null;
 	}
 
-	function currentStaffReadOnlyOutcome(): 'VERIFIED' | 'FINAL' | null {
-		const record = currentStaffAssignmentRecord();
-		const status = effectiveStaffAssignmentStatus(record);
-		return status === 'VERIFIED' || status === 'FINAL' ? status : null;
-	}
-
-	function currentStaffReadOnlyRecord(): DemoStaffAssignment | null {
-		return currentStaffReadOnlyOutcome() ? currentStaffAssignmentRecord() : null;
-	}
-
-	function currentStaffReadOnlyReviewerNote(): string {
-		return currentStaffFinalization()?.note ?? currentStaffReviewDecision()?.note ?? 'Reviewer belum menambahkan catatan.';
-	}
-
-	function currentStaffReadOnlyFinalDate(): string | null {
-		return currentStaffFinalization()?.finalizedAt ?? null;
-	}
-
 	function isBranchSelfAssessment(): boolean {
 		return Boolean(
 			canViewStaffHistory() &&
@@ -2406,11 +2623,17 @@
 
 	function assessmentFieldValue(item: ContractItem, field: 'actual' | 'evidence'): string {
 		const edit = edits[item.id];
-		if (field === 'actual') return edit?.actual ?? (item.actual === null ? '' : String(item.actual));
+		if (field === 'actual') {
+			return edit ? draftText(edit.actual) : item.actual === null ? '' : String(item.actual);
+		}
 		return edit?.evidence ?? item.evidence[0]?.reference ?? '';
 	}
 
-	function assessmentMissingCounts(contract: PerformanceContract): { actual: number; evidence: number; unsaved: number } {
+	function draftText(value: NumericDraft): string {
+		return value === null || value === undefined ? '' : String(value);
+	}
+
+	function assessmentMissingCounts(contract: PerformanceContract): { actual: number; evidence: number; unsaved: number; behavior: number } {
 		let actual = 0;
 		let evidence = 0;
 		let unsaved = 0;
@@ -2419,20 +2642,206 @@
 			if (!assessmentFieldValue(item, 'evidence').trim()) evidence += 1;
 			if (itemDirty(item)) unsaved += 1;
 		}
-		return { actual, evidence, unsaved };
+		const behavior = behaviorCriteria.filter((criterion) => !behaviorDraft[criterion.key]).length;
+		return { actual, evidence, unsaved, behavior };
+	}
+
+	function behaviorScorePreview(): number | null {
+		const ratings = behaviorCriteria.map(({ key }) => {
+			const rating = Number(behaviorDraft[key]);
+			return Number.isInteger(rating) && rating >= 1 && rating <= 5 ? rating : 0;
+		});
+		if (ratings.length === 0) return null;
+		if (ratings.every((rating) => rating === 0)) return null;
+		return Number(((ratings.reduce((total, rating) => total + rating, 0) / 25) * 100).toFixed(2));
+	}
+
+	function behaviorRatingsCompletedCount(): number {
+		return behaviorCriteria.filter(({ key }) => {
+			const rating = Number(behaviorDraft[key]);
+			return Number.isInteger(rating) && rating >= 1 && rating <= 5;
+		}).length;
+	}
+
+	function calculateItemScore(type: string, target: number, actual: number): number | null {
+		if (!Number.isFinite(target) || !Number.isFinite(actual)) return null;
+		if (type === 'Z') {
+			if (target !== 0 || actual < 0 || !Number.isInteger(actual)) return null;
+			return actual === 0 ? 100 : 0;
+		}
+		if (!['A', 'Q', 'L'].includes(type) || target <= 0) return null;
+		if ((type === 'Q' || type === 'L') && (actual < 0 || actual > 100 || target > 100)) return null;
+		const raw = type === 'L' ? 100 * (2 - actual / target) : (100 * actual) / target;
+		return Number(Math.max(0, Math.min(100, raw)).toFixed(3));
+	}
+
+	function kpiScorePreview(contract: PerformanceContract | null = selectedContract): {
+		score: number | null;
+		validWeight: number;
+		completedItems: number;
+		scoredItems: number;
+		pendingItems: number;
+		weightsValid: boolean;
+		canCalculateFinal: boolean;
+	} | null {
+		if (!contract) return null;
+		let totalWeight = 0;
+		let validWeight = 0;
+		let weightedScore = 0;
+		let completedItems = 0;
+		let scoredItems = 0;
+		let pendingItems = 0;
+
+		for (const item of contract.items) {
+			totalWeight += item.weight;
+			if (item.state === 'NOT_APPLICABLE' && item.reason?.trim()) {
+				completedItems += 1;
+				continue;
+			}
+
+			const actualText = assessmentFieldValue(item, 'actual').trim();
+			const evidence = assessmentFieldValue(item, 'evidence').trim();
+			const actual = actualText === '' ? Number.NaN : Number(actualText);
+			const score = Number.isFinite(actual) ? calculateItemScore(item.score_type, item.target, actual) : null;
+			if (score === null) {
+				pendingItems += 1;
+				continue;
+			}
+			scoredItems += 1;
+			weightedScore += score * item.weight;
+			if (!evidence) {
+				pendingItems += 1;
+				continue;
+			}
+			completedItems += 1;
+			validWeight += item.weight;
+		}
+
+		const weightsValid = Math.abs(totalWeight - 1) < 0.000001;
+		const score = weightsValid && scoredItems > 0
+			? Number((pendingItems === 0 ? weightedScore / validWeight : weightedScore).toFixed(3))
+			: null;
+		return {
+			score,
+			validWeight,
+			completedItems,
+			scoredItems,
+			pendingItems,
+			weightsValid,
+			canCalculateFinal: weightsValid && pendingItems === 0 && validWeight >= 0.7 && score !== null
+		};
+	}
+
+	function itemScorePreview(item: ContractItem): number | null {
+		const actualText = assessmentFieldValue(item, 'actual').trim();
+		if (actualText === '') return item.score;
+		return calculateItemScore(item.score_type, item.target, Number(actualText));
+	}
+
+	function weightedItemScorePreview(item: ContractItem): number | null {
+		const score = itemScorePreview(item);
+		return score === null ? null : Number((score * item.weight).toFixed(3));
+	}
+
+	function itemDraftComplete(item: ContractItem): boolean {
+		if (item.state === 'NOT_APPLICABLE') return Boolean(item.reason?.trim());
+		return Boolean(
+			assessmentFieldValue(item, 'actual').trim() &&
+			assessmentFieldValue(item, 'evidence').trim() &&
+			itemScorePreview(item) !== null
+		);
+	}
+
+	function isItemScorePreview(item: ContractItem): boolean {
+		const edit = edits[item.id];
+		return Boolean(edit && (
+			draftText(edit.actual).trim() !== (item.actual === null ? '' : String(item.actual)) ||
+			edit.evidence !== (item.evidence[0]?.reference ?? '')
+		));
+	}
+
+	function kpiPreviewMessage(contract: PerformanceContract): string {
+		const preview = kpiScorePreview(contract);
+		if (!preview) return 'Skor KPI belum tersedia.';
+		if (!preview.weightsValid) return 'Total bobot penilaian harus 100%.';
+		if (preview.pendingItems > 0) {
+			return preview.scoredItems > 0
+				? `Pratinjau menjumlahkan ${preview.scoredItems} realisasi; ${preview.pendingItems} KPI masih belum lengkap.`
+				: `${preview.pendingItems} KPI belum lengkap. Skor muncul setelah realisasi diisi.`;
+		}
+		if (preview.validWeight < 0.7) return 'Bobot data valid kurang dari 70%.';
+		return 'Nilai akhir memakai bobot KPI 80% dan perilaku 20%.';
+	}
+
+	function summaryBehaviorScore(contract: PerformanceContract | null = selectedContract): number | null {
+		return behaviorScorePreview() ?? contract?.score?.behavior_score ?? null;
+	}
+
+	function isFinalScoreReady(contract: PerformanceContract | null = selectedContract): boolean {
+		return Boolean(
+			contract &&
+			kpiScorePreview(contract)?.canCalculateFinal &&
+			behaviorRatingsCompletedCount() === behaviorCriteria.length
+		);
+	}
+
+	function summaryFinalScore(contract: PerformanceContract | null = selectedContract): number | null {
+		if (!contract) return null;
+		const kpiPreview = kpiScorePreview(contract);
+		const behaviorScore = summaryBehaviorScore(contract);
+		if (!kpiPreview?.weightsValid || (kpiPreview.pendingItems === 0 && kpiPreview.validWeight < 0.7)) return null;
+		const hasBehaviorInput = behaviorRatingsCompletedCount() > 0;
+		if (kpiPreview.score === null && !hasBehaviorInput) return null;
+		return Number(((kpiPreview.score ?? 0) * 0.8 + (behaviorScore ?? 0) * 0.2).toFixed(2));
+	}
+
+	function scoreContribution(score: number | null, weight: number): number | null {
+		return score === null ? null : Number((score * weight).toFixed(2));
 	}
 
 	function assessmentStepHint(): string {
-		if (assessmentStep === 1) return 'Isi realisasi untuk setiap indikator, lalu simpan item sebelum lanjut.';
-		if (assessmentStep === 2) return 'Tambahkan referensi bukti dan catatan agar data dapat diperiksa reviewer.';
-		return 'Periksa ringkasan, pastikan semua indikator lengkap, lalu ajukan ke reviewer.';
+		const cycle = cycles.find((entry) => entry.id === selectedContract?.cycle_id) ?? activeMonthlyCycle();
+		const measurementRange = cycleMeasurementRange(cycle);
+		if (assessmentStep === 1) return `Isi realisasi total untuk periode data ${measurementRange || 'sebelum siklus penilaian'}, lalu cantumkan referensi bukti untuk setiap KPI.`;
+		if (assessmentStep === 2) return 'Beri nilai pada lima indikator perilaku yang sama untuk semua jabatan. Nilai 3 berarti memenuhi standar.';
+		return 'Periksa capaian, nilai perilaku, dan urutan penilai sebelum mengirim.';
+	}
+
+	function reviewerSlotStatus(contract: Pick<PerformanceContract, 'status' | 'review_workflow' | 'review_history'>, slot: 'P1' | 'P2'): string {
+		const workflow = contract.review_workflow;
+		const reviewer = workflow?.reviewer_slots?.[slot];
+		if (!reviewer || reviewer.state === 'SKIPPED') return 'Dilewati karena jabatan kosong';
+		if (contract.status === 'SUBMITTED' && workflow?.current_slot === slot) return 'Menunggu penilaian';
+		if (contract.status === 'SUBMITTED' && workflow?.active_slots.includes(slot)) return 'Menunggu giliran';
+		const latestEvent = [...(contract.review_history ?? [])].reverse().find((event) => event.slot === slot);
+		if (latestEvent?.decision === 'VERIFIED') return 'Selesai';
+		if (latestEvent?.decision === 'REVISION') return 'Dikembalikan untuk revisi';
+		if (contract.status === 'FINAL' && workflow?.active_slots.includes(slot)) return 'Selesai';
+		return 'Belum dimulai';
+	}
+
+	function reviewerDecisionLabel(decision: string): string {
+		if (decision === 'VERIFIED') return 'Disetujui';
+		if (decision === 'REVISION') return 'Dikembalikan';
+		if (decision === 'FINAL') return 'Difinalisasi';
+		return decision;
+	}
+
+	function reviewerVerifyLabel(contract: PerformanceContract): string {
+		const activeSlots = contract.review_workflow?.active_slots ?? [];
+		const currentSlot = contract.review_workflow?.current_slot;
+		const index = currentSlot ? activeSlots.indexOf(currentSlot) : -1;
+		return index >= 0 && index === activeSlots.length - 1
+			? 'Verifikasi dan selesaikan'
+			: 'Verifikasi dan teruskan';
 	}
 
 	function assessmentNextBlockedReason(contract: PerformanceContract): string | null {
 		const counts = assessmentMissingCounts(contract);
-		if (assessmentStep === 1 && counts.actual > 0) return `${counts.actual} indikator belum memiliki realisasi.`;
-		if (assessmentStep === 2 && counts.evidence > 0) return `${counts.evidence} indikator belum memiliki bukti.`;
-		if (assessmentStep === 2 && counts.unsaved > 0) return 'Simpan perubahan indikator sebelum masuk ke ringkasan.';
+		if (assessmentStep === 1 && counts.actual > 0) return `${counts.actual} KPI belum memiliki realisasi.`;
+		if (assessmentStep === 1 && counts.evidence > 0) return `${counts.evidence} KPI belum memiliki referensi bukti.`;
+		if (assessmentStep === 1 && counts.unsaved > 0) return 'Simpan perubahan KPI sebelum lanjut.';
+		if (assessmentStep === 2 && counts.behavior > 0) return `${counts.behavior} indikator perilaku belum dinilai.`;
 		return null;
 	}
 
@@ -2441,10 +2850,11 @@
 		if (counts.actual > 0) return `${counts.actual} indikator belum memiliki realisasi.`;
 		if (counts.evidence > 0) return `${counts.evidence} indikator belum memiliki bukti.`;
 		if (counts.unsaved > 0) return 'Simpan perubahan indikator sebelum mengajukan.';
+		if (counts.behavior > 0) return `${counts.behavior} indikator perilaku belum dinilai.`;
 		return submitBlockedReason(contract);
 	}
 
-	function moveAssessmentStep(next: SelfAssessmentStep): void {
+	async function moveAssessmentStep(next: SelfAssessmentStep): Promise<void> {
 		if (!selectedContract || !isBranchSelfAssessment()) return;
 		if (next > assessmentStep) {
 			const reason = assessmentNextBlockedReason(selectedContract);
@@ -2453,12 +2863,13 @@
 				return;
 			}
 		}
+		if (assessmentStep === 2 && next === 3 && !(await saveBehaviorEvaluation())) return;
 		errorMessage = '';
 		assessmentStep = next;
 	}
 
 	function activeMonthlyCycle(): Cycle | null {
-		return cycles.find((cycle) => cycle.status === 'OPEN' && cycle.cadence === 'MONTHLY') ?? null;
+		return cycles.find((cycle) => cycle.status === 'OPEN') ?? null;
 	}
 
 	function monthlyCycleDateRange(): string {
@@ -2475,15 +2886,23 @@
 		);
 	}
 
-	function existingMonthlyContract(): PerformanceContract | null {
-		const cycle = activeMonthlyCycle();
-		return cycle ? existingContractForCycle(cycle) : null;
+	function openInputCycles(): Cycle[] {
+		return cycles
+			.filter((cycle) => cycle.status === 'OPEN')
+			.filter((cycle) => {
+				const contract = existingContractForCycle(cycle);
+				return !contract || ['DRAFT', 'REVISION'].includes(contract.status);
+			})
+			.sort((left, right) => left.ends_at.localeCompare(right.ends_at));
 	}
 
 	function submitBlockedReason(contract: PerformanceContract): string | null {
-		if (!contract.reviewer_employee_id) return 'Reviewer belum ditetapkan untuk kontrak ini.';
+		if (contract.items.length < 1) return 'Minimal satu KPI sesuai jabatan harus tersedia.';
 		if (contract.items.some((item) => !['VALID', 'NOT_APPLICABLE'].includes(item.state))) {
 			return 'Lengkapi target, realisasi, dan bukti setiap indikator sebelum pengajuan.';
+		}
+		if (!contract.behavior_evaluation || Object.keys(contract.behavior_evaluation.ratings ?? {}).length !== 5) {
+			return 'Nilai lima indikator perilaku sebelum pengajuan.';
 		}
 		return null;
 	}
@@ -2542,6 +2961,10 @@
 		}
 
 		const item = selectedContract?.items.find((contractItem) => contractItem.id === event.object_id);
+		if (typeof before.actual === 'number' && typeof after.actual === 'number' && before.actual !== after.actual) {
+			const unit = item?.unit ? ' ' + item.unit : '';
+			changes.push('Realisasi ' + formatNumber(before.actual, 2) + unit + ' → ' + formatNumber(after.actual, 2) + unit);
+		}
 		if (typeof before.target === 'number' && typeof after.target === 'number') {
 			const unit = item?.unit ? ' ' + item.unit : '';
 			changes.push(
@@ -2561,6 +2984,15 @@
 					formatNumber(after.weight * 100, 1) +
 					'%'
 			);
+		}
+		const beforeRatings = before.ratings as Record<string, unknown> | undefined;
+		const afterRatings = after.ratings as Record<string, unknown> | undefined;
+		if (beforeRatings && afterRatings) {
+			for (const criterion of behaviorCriteria) {
+				if (beforeRatings[criterion.key] !== afterRatings[criterion.key]) {
+					changes.push(`${criterion.label} ${String(beforeRatings[criterion.key] ?? '—')} → ${String(afterRatings[criterion.key] ?? '—')}`);
+				}
+			}
 		}
 
 		return changes.length > 0 ? changes.join(' · ') : null;
@@ -2582,6 +3014,7 @@
 			const response = await api<Envelope<CurrentUser>>('/api/v1/me');
 			currentUser = response.data;
 			await refreshWorkspace();
+			await openSelfServiceHome();
 		} catch (error) {
 			currentUser = null;
 			if (error instanceof ApiError && error.status !== 401) errorMessage = error.message;
@@ -2595,28 +3028,26 @@
 		if (!currentUser) return;
 		const cyclesResponse = await api<Envelope<Cycle[]>>('/api/v1/cycles');
 		cycles = cyclesResponse.data;
-		const activeCycle = cycles.find((cycle) => cycle.status === 'OPEN') ?? cycles[0];
-		if (!activeCycle) {
-			dashboard = null;
-			contracts = [];
-			return;
-		}
-
-		const query = '?cycle_id=' + encodeURIComponent(activeCycle.id);
+		configuredPeriods = cycles.map(cycleToPeriod);
+		cycleStatusDrafts = Object.fromEntries(configuredPeriods.map((period) => [period.id, period.status]));
+		const activeCycle = cycles.find((cycle) => cycle.status === 'OPEN');
+		const cycleQuery = activeCycle ? '?cycle_id=' + encodeURIComponent(activeCycle.id) : '';
+		const filterContractsToCycle = Boolean(activeCycle && hasAdminAccess() && !canViewStaffHistory());
+		const contractQuery = (filterContractsToCycle ? cycleQuery + '&' : '?') + 'per_page=100';
 		const [dashboardResponse, firstContractPage] = await Promise.all([
-			api<Envelope<Dashboard>>('/api/v1/dashboard' + query),
+			activeCycle ? api<Envelope<Dashboard>>('/api/v1/dashboard' + cycleQuery) : Promise.resolve(null),
 			api<{ data: PerformanceContract[]; meta: Record<string, number> }>(
-				'/api/v1/contracts' + query + '&per_page=100'
+				'/api/v1/contracts' + contractQuery
 			)
 		]);
-		dashboard = dashboardResponse.data;
+		dashboard = dashboardResponse?.data ?? null;
 		const allContracts = [...firstContractPage.data];
 		const pageSize = firstContractPage.meta.per_page || 100;
 		const total = firstContractPage.meta.total || allContracts.length;
 		const pageCount = Math.ceil(total / pageSize);
 		for (let page = 2; page <= pageCount; page += 1) {
 			const pageResponse = await api<{ data: PerformanceContract[]; meta: Record<string, number> }>(
-				'/api/v1/contracts' + query + '&per_page=' + pageSize + '&page=' + page
+				'/api/v1/contracts' + contractQuery + '&page=' + page
 			);
 			allContracts.push(...pageResponse.data);
 		}
@@ -2629,65 +3060,42 @@
 		}
 	}
 
-	async function openSelfAssignment(): Promise<void> {
-		setView('assignment');
-		if (!canSelfAssignRole() || !activeMonthlyCycle() || existingMonthlyContract() || catalogLoading || catalogLoaded) return;
-
-		catalogLoading = true;
+	async function openSelfAssignment(cycleId?: string): Promise<void> {
+		if (!canSelfAssignRole()) return;
 		errorMessage = '';
-		try {
-			const track = staffTrack();
-			const positionMapping = currentStaffPositionMapping();
-			if (positionMapping || currentUser?.access_role === 'PEGAWAI') {
-				const mappedItems = positionMapping?.status === 'ACTIVE' && positionMappingItems(positionMapping).length > 0 ? positionMappingItems(positionMapping) : [];
-				kpiDefinitions = positionMapping ? mappedItems.map((item) => demoDefinitionFromPositionMapping(item, positionMapping)) : [];
-				targetDrafts = Object.fromEntries(
-					kpiDefinitions.map((definition) => [definition.id, String(definition.sample_target)])
-				);
-				const savedAssignment = currentStaffAssignmentRecord();
-				const mappedIds = new Set(kpiDefinitions.map((definition) => definition.id));
-				selectedDefinitionIds = savedAssignment
-					? savedAssignment.selectedIds.filter((id) => mappedIds.has(id))
-					: [];
-				staffAssignmentStatus = effectiveStaffAssignmentStatus(savedAssignment);
-				catalogLoaded = true;
-				return;
-			}
-			if (track) {
-				const mapping = mappingForTrack(track);
-				const mappedItems = mappedCatalogItemsForTrack(track);
-				kpiDefinitions = mappedItems.map((item) => demoDefinitionFromCatalogItem(item, mapping));
-				targetDrafts = Object.fromEntries(
-					kpiDefinitions.map((definition) => [definition.id, String(definition.sample_target)])
-				);
-				const savedAssignment = currentStaffAssignmentRecord();
-				const mappedIds = new Set(kpiDefinitions.map((definition) => definition.id));
-				selectedDefinitionIds = savedAssignment
-					? savedAssignment.selectedIds.filter((id) => mappedIds.has(id))
-					: [];
-				staffAssignmentStatus = effectiveStaffAssignmentStatus(savedAssignment);
-				catalogLoaded = true;
-				return;
-			}
-
-			const response = await api<Envelope<KpiDefinition[]>>('/api/v1/kpi-definitions?per_page=100');
-			kpiDefinitions = response.data;
-			targetDrafts = Object.fromEntries(
-				response.data.map((definition) => [definition.id, String(definition.sample_target)])
-			);
-			catalogLoaded = true;
-		} catch (error) {
-			errorMessage = error instanceof Error ? error.message : 'Katalog KPI belum dapat dimuat.';
-		} finally {
-			catalogLoading = false;
+		if (!cycleId) {
+			setView('assignment');
+			return;
 		}
+
+		const cycle = cycles.find((item) => item.id === cycleId && item.status === 'OPEN');
+		if (!cycle) {
+			setView('assignment');
+			errorMessage = 'Periode ini tidak sedang dibuka untuk pengisian.';
+			return;
+		}
+
+		const existing = existingContractForCycle(cycle);
+		if (existing) {
+			if (!['DRAFT', 'REVISION'].includes(existing.status)) {
+				setView('mine');
+				errorMessage = 'Periode ini sudah diajukan atau diselesaikan. Lihat statusnya di Riwayat saya.';
+				return;
+			}
+			setView('mine');
+			staffWorkspaceTab = 'KPI';
+			await openContract(existing.id);
+			return;
+		}
+		await createSelfAssignment(cycle.id);
 	}
 
-	async function openExistingMonthlyContract(): Promise<void> {
-		const contract = existingMonthlyContract();
-		if (!contract) return;
-		setView('mine');
-		await openContract(contract.id);
+	async function openSelfServiceHome(): Promise<void> {
+		if (canSelfAssignRole() && !hasAdminAccess()) {
+			await openMine();
+			return;
+		}
+		setView('overview', true);
 	}
 
 	function toggleDefinition(id: string, checked: boolean): void {
@@ -2700,45 +3108,22 @@
 		targetDrafts = { ...targetDrafts, [id]: value };
 	}
 
-	async function createSelfAssignment(): Promise<void> {
-		const cycle = activeMonthlyCycle();
+	async function createSelfAssignment(cycleId: string): Promise<void> {
+		const cycle = cycles.find((item) => item.id === cycleId && item.status === 'OPEN');
 		if (!cycle) {
-			errorMessage = 'Belum ada siklus KPI bulanan yang terbuka.';
+			errorMessage = 'Periode ini tidak sedang dibuka untuk pengisian.';
 			return;
 		}
-		if (existingContractForCycle(cycle)) {
-			errorMessage = 'Kontrak untuk siklus ini sudah tersedia.';
-			return;
-		}
-
-		const selectedDefinitions = kpiDefinitions.filter((definition) =>
-			selectedDefinitionIds.includes(definition.id)
-		);
-		if (selectedDefinitions.length === 0) {
-			errorMessage = 'Pilih minimal satu indikator KPI.';
-			return;
-		}
-
-		for (const definition of selectedDefinitions) {
-			const target = Number(targetDrafts[definition.id]);
-			if (!Number.isFinite(target) || (definition.type === 'Z' ? target !== 0 : target <= 0)) {
-				errorMessage = 'Periksa target setiap indikator yang dipilih.';
-				return;
+		const existing = existingContractForCycle(cycle);
+		if (existing) {
+			if (['DRAFT', 'REVISION'].includes(existing.status)) {
+				setView('mine');
+				staffWorkspaceTab = 'KPI';
+				await openContract(existing.id);
+			} else {
+				await openMine();
+				errorMessage = 'Periode ini sudah diajukan atau diselesaikan. Lihat statusnya di Riwayat saya.';
 			}
-			if (['Q', 'L'].includes(definition.type) && target > 100) {
-				errorMessage = 'Target indikator tipe Q dan L maksimal 100.';
-				return;
-			}
-		}
-
-		if (staffTrack()) {
-			if (staffAssignmentStatus === 'SUBMITTED') {
-				errorMessage = 'Self-assessment sudah diajukan dan tidak dapat diubah pada demo ini.';
-				return;
-			}
-			saveStaffAssignmentDraft();
-			errorMessage = '';
-			successMessage = 'Draf self-assessment demo tersimpan. Periksa ringkasan lalu ajukan ke reviewer.';
 			return;
 		}
 
@@ -2748,20 +3133,14 @@
 		try {
 			const response = await api<Envelope<PerformanceContract>>('/api/v1/contracts', {
 				method: 'POST',
-				body: JSON.stringify({
-					cycle_id: cycle.id,
-					items: selectedDefinitions.map((definition) => ({
-						kpi_definition_id: definition.id,
-						target: Number(targetDrafts[definition.id])
-					}))
-				})
+				body: JSON.stringify({ cycle_id: cycle.id })
 			});
-			setView('mine');
 			await refreshWorkspace();
+			setView('mine');
 			await openContract(response.data.id);
-			successMessage = 'Draf KPI tersimpan. Realisasi dapat diisi setelah target disepakati.';
+			successMessage = 'KPI sesuai jabatan otomatis disiapkan untuk periode ini.';
 		} catch (error) {
-			errorMessage = error instanceof Error ? error.message : 'Draf KPI belum dapat dibuat.';
+			errorMessage = error instanceof Error ? error.message : 'Penilaian belum dapat disiapkan.';
 		} finally {
 			busy = false;
 		}
@@ -2769,7 +3148,7 @@
 
 	async function login(): Promise<void> {
 		if (!selectedIdentityId) {
-			errorMessage = 'Pilih identitas demo terlebih dahulu.';
+		errorMessage = 'Pilih profil pegawai terlebih dahulu.';
 			return;
 		}
 		busy = true;
@@ -2782,8 +3161,9 @@
 			});
 			currentUser = response.data;
 			await refreshWorkspace();
+			await openSelfServiceHome();
 		} catch (error) {
-			errorMessage = error instanceof Error ? error.message : 'Login demo belum berhasil.';
+			errorMessage = error instanceof Error ? error.message : 'Login belum berhasil.';
 		} finally {
 			busy = false;
 		}
@@ -2805,6 +3185,7 @@
 			currentUser = response.data;
 			ssoPassword = '';
 			await refreshWorkspace();
+			await openSelfServiceHome();
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Login SSO belum berhasil.';
 		} finally {
@@ -2892,6 +3273,7 @@
 			if (!sameContract) assessmentStep = 1;
 			commentDraft = '';
 			reviewComment = '';
+			behaviorRevisionComment = '';
 
 			try {
 				const history = await api<{ data: AuditEvent[] }>(
@@ -2901,8 +3283,30 @@
 			} catch {
 				auditLoadFailed = true;
 			}
+		behaviorDraft = Object.fromEntries(
+			behaviorCriteria.map(({ key }) => [key, String(response.data.behavior_evaluation?.ratings?.[key] ?? '')])
+			) as Partial<Record<BehaviorKey, string>>;
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Detail kontrak belum dapat dimuat.';
+		}
+	}
+
+	async function refreshSelectedContract(): Promise<void> {
+		const contractId = selectedContract?.id;
+		if (!contractId) return;
+		await openContract(contractId);
+		if (errorMessage || selectedContract?.id !== contractId) {
+			throw new Error(errorMessage || 'Nilai terbaru belum dapat dimuat.');
+		}
+		const refreshedContract = selectedContract;
+		contracts = contracts.map((contract) => contract.id === contractId ? refreshedContract : contract);
+	}
+
+	function closeSelectedContract(): void {
+		selectedContract = null;
+		if (view === 'mine') {
+			staffWorkspaceTab = 'KPI';
+			assessmentStep = 1;
 		}
 	}
 
@@ -2911,6 +3315,14 @@
 			['DRAFT', 'REVISION'].includes(contract.status) &&
 				currentUser &&
 				(contract.subject_id === currentUser.employee_id || hasAccessRole('SDM'))
+		);
+	}
+
+	function canReviewSubmitted(contract: PerformanceContract): boolean {
+		return Boolean(
+			contract.status === 'SUBMITTED' &&
+			currentUser &&
+			contract.reviewer_employee_id === currentUser.employee_id
 		);
 	}
 
@@ -2926,11 +3338,34 @@
 		const edit = edits[item.id];
 		if (!edit) return false;
 		return (
-			edit.actual !== (item.actual === null ? '' : String(item.actual)) ||
+			draftText(edit.actual) !== (item.actual === null ? '' : String(item.actual)) ||
 			edit.evidence !== (item.evidence[0]?.reference ?? '') ||
 			edit.note !== (item.note ?? '') ||
-			Number(edit.target) !== item.target ||
-			Number(edit.weightPercent) / 100 !== item.weight
+			Number(draftText(edit.target)) !== item.target ||
+			Number(draftText(edit.weightPercent)) / 100 !== item.weight
+		);
+	}
+
+	function itemActualDirty(item: ContractItem): boolean {
+		const edit = edits[item.id];
+		if (!edit) return false;
+		const value = draftText(edit.actual).trim();
+		if (value === '') return item.actual !== null;
+		return item.actual === null || Number(value) !== item.actual;
+	}
+
+	function canSaveItem(item: ContractItem): boolean {
+		if (!itemDirty(item)) return false;
+		if (selectedContract && canReviewSubmitted(selectedContract)) {
+			return itemActualDirty(item) && Boolean(draftText(edits[item.id]?.actual).trim()) && Boolean(edits[item.id]?.reason.trim());
+		}
+		return true;
+	}
+
+	function behaviorDraftDirty(): boolean {
+		if (!selectedContract) return false;
+		return behaviorCriteria.some(({ key }) =>
+			Number(behaviorDraft[key]) !== Number(selectedContract?.behavior_evaluation?.ratings?.[key])
 		);
 	}
 
@@ -2939,21 +3374,40 @@
 		const edit = edits[item.id];
 		if (!edit) return;
 		const payload: Record<string, unknown> = {};
+		const isReviewCorrection = canReviewSubmitted(selectedContract);
 
-		if (canEditActual(selectedContract)) {
-			payload.actual = edit.actual.trim() === '' ? null : Number(edit.actual);
-			payload.note = edit.note;
-			payload.evidence = edit.evidence.trim()
-				? [{ label: 'Referensi demo', reference: edit.evidence.trim() }]
-				: [];
-			payload.state = edit.actual.trim() !== '' && edit.evidence.trim() ? 'VALID' : 'PENDING';
-		}
-		if (canEditTarget(selectedContract)) {
-			if (Number(edit.target) !== item.target) payload.target = Number(edit.target);
-			if (Number(edit.weightPercent) / 100 !== item.weight) {
-				payload.weight = Number(edit.weightPercent) / 100;
+		if (isReviewCorrection) {
+			if (!itemActualDirty(item)) return;
+			if (!edit.reason.trim()) {
+				errorMessage = 'Catatan alasan koreksi KPI wajib diisi.';
+				return;
 			}
-			if ('target' in payload || 'weight' in payload) payload.reason = edit.reason;
+			const actual = draftText(edit.actual).trim();
+			if (actual === '') {
+				errorMessage = 'Nilai realisasi hasil koreksi wajib diisi.';
+				return;
+			}
+			payload.actual = Number(actual);
+			payload.reviewer_comment = edit.reason.trim();
+		} else {
+
+			if (canEditActual(selectedContract)) {
+				const actual = draftText(edit.actual).trim();
+				const evidence = edit.evidence.trim();
+				payload.actual = actual === '' ? null : Number(actual);
+				payload.note = edit.note;
+				payload.evidence = evidence ? [{ label: 'Referensi', reference: evidence }] : [];
+				payload.state = actual !== '' && evidence ? 'VALID' : 'PENDING';
+			}
+			if (canEditTarget(selectedContract)) {
+				const target = draftText(edit.target).trim();
+				const weightPercent = draftText(edit.weightPercent).trim();
+				if (target && Number(target) !== item.target) payload.target = Number(target);
+				if (weightPercent && Number(weightPercent) / 100 !== item.weight) {
+					payload.weight = Number(weightPercent) / 100;
+				}
+				if ('target' in payload || 'weight' in payload) payload.reason = edit.reason;
+			}
 		}
 		if (Object.keys(payload).length === 0) return;
 
@@ -2965,10 +3419,54 @@
 				method: 'PATCH',
 				body: JSON.stringify(payload)
 			});
-			successMessage = 'Perubahan item tersimpan.';
-			await refreshWorkspace();
+			await refreshSelectedContract();
+			successMessage = isReviewCorrection
+				? `Koreksi KPI tersimpan. Nilai akhir sekarang ${formatNumber(summaryFinalScore(), 2)}.`
+				: 'Perubahan item tersimpan.';
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Perubahan belum tersimpan.';
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function saveBehaviorEvaluation(): Promise<boolean> {
+		if (!selectedContract) return false;
+		const missing = behaviorCriteria.filter(({ key }) => !behaviorDraft[key]);
+		if (missing.length > 0) {
+			errorMessage = `${missing.length} indikator perilaku belum dinilai.`;
+			return false;
+		}
+		const isReviewCorrection = canReviewSubmitted(selectedContract);
+		if (isReviewCorrection && !behaviorDraftDirty()) {
+			errorMessage = 'Ubah minimal satu nilai perilaku sebelum menyimpan revisi.';
+			return false;
+		}
+		if (isReviewCorrection && !behaviorRevisionComment.trim()) {
+			errorMessage = 'Catatan alasan koreksi perilaku wajib diisi.';
+			return false;
+		}
+
+		busy = true;
+		errorMessage = '';
+		successMessage = '';
+		try {
+			await api('/api/v1/contracts/' + selectedContract.id + '/behavior', {
+				method: 'PUT',
+				body: JSON.stringify({
+					ratings: Object.fromEntries(behaviorCriteria.map(({ key }) => [key, Number(behaviorDraft[key])])),
+					...(isReviewCorrection ? { reviewer_comment: behaviorRevisionComment.trim() } : {})
+				})
+			});
+			behaviorRevisionComment = '';
+			await refreshSelectedContract();
+			successMessage = isReviewCorrection
+				? `Koreksi perilaku tersimpan. Nilai akhir sekarang ${formatNumber(summaryFinalScore(), 2)}.`
+				: 'Penilaian perilaku tersimpan.';
+			return true;
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Nilai perilaku belum tersimpan.';
+			return false;
 		} finally {
 			busy = false;
 		}
@@ -3038,7 +3536,57 @@
 		}
 	}
 
-	function setView(next: 'overview' | 'mine' | 'reviews' | 'assignment' | 'periods' | 'history' | 'monitoring' | 'catalog' | 'mapping' | 'positions' | 'ssoMappings' | 'audit' | 'comparison'): void {
+	function recordMenuAccess(next: AuditMenuKey, previous: AuditMenuKey): Promise<void> {
+		if (!currentUser) return Promise.resolve();
+		const labels: Record<AuditMenuKey, string> = {
+			overview: 'Ringkasan',
+			mine: 'KPI saya',
+				reviews: canReviewInbox() ? 'Inbox evaluasi' : 'Tinjauan nilai',
+			assignment: 'Isi KPI',
+			periods: 'Periode penilaian',
+			history: 'Riwayat saya',
+			monitoring: 'Monitoring',
+			catalog: 'Katalog KPI',
+			mapping: 'Mapping KPI',
+			positionKpis: 'Indikator jabatan',
+			positions: 'Master jabatan',
+			ssoMappings: 'Mapping identitas SSO',
+			audit: 'Audit trail keputusan',
+			comparison: 'Banding periode',
+			auditLog: 'Audit log',
+			'mine-kpi': 'KPI',
+			'mine-behavior': 'Perilaku',
+			'mine-approval': 'Periksa penilaian',
+			'mine-history': 'Riwayat tindakan'
+		};
+		return api('/api/v1/audit-events/menu-access', {
+			method: 'POST',
+			body: JSON.stringify({ menu_key: next, menu_label: labels[next], previous_menu: previous, previous_menu_label: labels[previous] })
+		}).then(() => undefined).catch(() => undefined);
+	}
+
+	async function loadAdminAuditLog(page = 1): Promise<void> {
+		if (!canViewAuditTrail()) return;
+		adminAuditLoading = true;
+		adminAuditFailed = false;
+		const params = new URLSearchParams({ page: String(page), per_page: '50' });
+		if (adminAuditSearch.trim()) params.set('search', adminAuditSearch.trim());
+		if (adminAuditAction) params.set('action', adminAuditAction);
+		if (adminAuditFrom) params.set('from', adminAuditFrom);
+		if (adminAuditTo) params.set('to', adminAuditTo);
+		try {
+			const response = await api<AdminAuditLogPage>('/api/v1/admin/audit-log?' + params.toString());
+			adminAuditEvents = response.data;
+			adminAuditMeta = response.meta;
+		} catch {
+			adminAuditFailed = true;
+		} finally {
+			adminAuditLoading = false;
+		}
+	}
+
+	function setView(next: WorkspaceView, logSameView = false): void {
+		const previous = view;
 		view = next;
 		if (next !== 'positions') {
 			positionEditorOpen = false;
@@ -3049,27 +3597,105 @@
 		auditLoadFailed = false;
 		errorMessage = '';
 		successMessage = '';
+		const accessLog = next !== previous || logSameView
+			? recordMenuAccess(next, previous)
+			: Promise.resolve();
+		if (next === 'auditLog') void accessLog.then(() => loadAdminAuditLog());
 	}
 
 	function pageTitle(): string {
 		if (view === 'mine') return 'KPI saya';
 		if (view === 'reviews') {
 			if (canReviewInbox()) return 'Inbox evaluasi';
-			return hasAccessRole('SDM') ? 'Finalisasi dan tinjauan' : 'Tinjauan kontrak';
+			return hasAccessRole('SDM') ? 'Finalisasi dan tinjauan' : 'Tinjauan nilai';
 		}
-		if (view === 'assignment') return staffTrack() ? `Susun KPI · ${staffTrackLabel()}` : 'Susun KPI saya';
+		if (view === 'assignment') return staffTrack() ? `Isi KPI · ${staffTrackLabel()}` : 'Isi KPI jabatan';
 		if (view === 'periods') return 'Atur periode';
 		if (view === 'monitoring') return 'Monitoring Admin KPI';
 		if (view === 'audit') return 'Audit trail keputusan';
+		if (view === 'auditLog') return 'Audit log';
 		if (view === 'comparison') return 'Banding periode';
 		if (view === 'catalog') return 'Katalog KPI dan target';
-		if (view === 'mapping') return 'Penetapan KPI ke jabatan';
+		if (view === 'mapping' || view === 'positionKpis') return 'Indikator KPI jabatan';
 		if (view === 'positions') return 'Master jabatan';
 		if (view === 'ssoMappings') return 'Mapping identitas SSO';
-		if (view === 'history') return 'Riwayat Penilaian';
+		if (view === 'history') return 'Riwayat penilaian';
 		if (view === 'overview' && canViewStaffHistory()) return 'Dashboard saya';
 		return 'Ringkasan kinerja';
 	}
+
+	function navigationAction(action: () => void): () => void {
+		return () => {
+			closeMobileSidebar();
+			action();
+		};
+	}
+
+	let navigationSections = $derived.by((): WorkspaceNavigationSection[] => {
+		const focusedSelfService = canSelfAssignRole() && !hasAdminAccess();
+		const workspaceItems: WorkspaceNavigationSection['items'] = focusedSelfService ? [] : [
+			{
+				id: 'overview',
+				label: canViewStaffHistory() ? 'Dashboard saya' : 'Ringkasan',
+				icon: LayoutDashboard,
+				active: view === 'overview',
+				onSelect: navigationAction(() => setView('overview'))
+			},
+			{
+				id: 'mine',
+				label: 'KPI saya',
+				icon: UserRound,
+				active: view === 'mine',
+				onSelect: navigationAction(() => void openMine())
+			}
+		];
+
+		if (canSelfAssignRole()) {
+			workspaceItems.push({
+				id: 'assignment',
+				label: 'Isi KPI',
+				icon: ListPlus,
+				active: view === 'assignment',
+				onSelect: navigationAction(() => void openSelfAssignment())
+			});
+		}
+
+		if (canViewStaffHistory()) {
+			workspaceItems.push({
+				id: 'history',
+				label: 'Riwayat saya',
+				icon: History,
+				active: view === 'history',
+				onSelect: navigationAction(openHistory)
+			});
+		}
+
+		if (!focusedSelfService || canReviewAssignedContracts()) {
+			workspaceItems.push({
+				id: 'reviews',
+				label: canReviewInbox() ? 'Inbox evaluasi' : 'Tinjauan nilai',
+				icon: ClipboardCheck,
+				active: view === 'reviews',
+				count: dashboard?.contracts_needing_action ?? undefined,
+				onSelect: navigationAction(() => (canReviewInbox() ? openReviews() : setView('reviews')))
+			});
+		}
+
+		const sections: WorkspaceNavigationSection[] = [{ label: 'Ruang kerja', items: workspaceItems }];
+
+		if (hasAdminAccess()) {
+			sections.push({
+				label: 'Administrasi',
+				items: [
+					{ id: 'positionKpis', label: 'Indikator jabatan', icon: ListPlus, active: view === 'positionKpis', onSelect: navigationAction(openAssignmentMapping) },
+					{ id: 'periods', label: 'Periode penilaian', icon: CalendarDays, active: view === 'periods', onSelect: navigationAction(() => setView('periods')) },
+					{ id: 'auditLog', label: 'Audit log', icon: FileClock, active: view === 'auditLog', onSelect: navigationAction(() => setView('auditLog')) }
+				]
+			});
+		}
+
+		return sections;
+	});
 
 	onMount(() => {
 		void initialize();
@@ -3077,22 +3703,26 @@
 </script>
 
 <svelte:head>
-	<title>KPI Demo Perbankan</title>
-	<meta name="description" content="Demo alur KPI dengan data organisasi dan capaian sintetis." />
+	<title>Tera · Kinerja BKK Jateng</title>
+	<meta name="description" content="Ruang kerja kinerja BKK Jateng." />
+	<link rel="icon" type="image/svg+xml" href="/tera-mark.svg" />
 </svelte:head>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 {#if loading}
 	<main class="loading-screen" aria-live="polite">
 		<div class="loading-mark" aria-hidden="true"></div>
-		<p>Memuat ruang demo…</p>
+		<p>Memuat ruang KPI…</p>
 	</main>
 {:else if !currentUser}
 	<main class="login-page">
+		<ThemeToggle isDark={isDark} onToggle={toggleTheme} className="login-theme-toggle" />
 		<div class="login-frame">
 			<section class="login-context" aria-labelledby="login-title">
 				<div class="brand-line">
-					<span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M8 29V11h5l7 9 7-9h5v18h-5V18l-7 9-7-9v11z"/><path class="brand-accent" d="M31 8h4v4h-4z"/></svg></span>
-					<div><strong>KPI Perbankan</strong><span>Ruang demo internal</span></div>
+					<span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M6 6h26v5H17.5v22h-5V11H6z"/><path class="brand-accent" d="M22 28h3v5h-3zm5-6h3v11h-3zm5-7h3v18h-3z"/></svg></span>
+					<div><strong>Tera</strong><span>Kinerja BKK Jateng</span></div>
 				</div>
 
 				<div class="login-context-copy">
@@ -3103,8 +3733,8 @@
 
 				<dl class="login-facts">
 					<div><dt>Periode</dt><dd>Diatur Admin</dd></div>
-					<div><dt>Cakupan awal</dt><dd>Pusat, Korwil, satu cabang</dd></div>
-					<div><dt>Dataset</dt><dd>Data sintetis</dd></div>
+					<div><dt>Cakupan</dt><dd>Pusat, wilayah, dan cabang</dd></div>
+					<div><dt>Unit</dt><dd>Sesuai jabatan pegawai</dd></div>
 				</dl>
 
 				<p class="login-context-note">Periode tersedia 1, 3, 6, atau 12 bulan. Default rancangan mengikuti triwulan PRD.</p>
@@ -3112,13 +3742,12 @@
 
 			<section class="login-card" aria-labelledby="identity-title">
 			<div class="login-copy">
-				<Badge variant="outline" class="demo-badge">Data KPI sintetis</Badge>
 				<h2 id="identity-title">Masuk ke ruang KPI</h2>
-				<p>Gunakan akun kerja atau pilih identitas demo lokal untuk mencoba peran.</p>
+				<p>Gunakan akun kerja atau pilih profil pegawai untuk melanjutkan.</p>
 			</div>
 			<div class="login-mode-switch" role="group" aria-label="Metode masuk">
 				<button type="button" class:active={loginMode === 'SSO'} aria-pressed={loginMode === 'SSO'} onclick={() => { loginMode = 'SSO'; errorMessage = ''; }}>Akun kerja SSO</button>
-				<button type="button" class:active={loginMode === 'DEMO'} aria-pressed={loginMode === 'DEMO'} onclick={() => { loginMode = 'DEMO'; errorMessage = ''; }}>User demo</button>
+				<button type="button" class:active={loginMode === 'DEMO'} aria-pressed={loginMode === 'DEMO'} onclick={() => { loginMode = 'DEMO'; errorMessage = ''; }}>Pilih profil</button>
 			</div>
 			{#if errorMessage}<p class="alert error-alert" role="alert">{errorMessage}</p>{/if}
 			{#if loginMode === 'SSO'}
@@ -3134,53 +3763,26 @@
 				</form>
 			{:else}
 
-			<label class="field-label" for="identity-search">Cari nama, peran, atau unit</label>
-			<input
-				id="identity-search"
-				class="text-input search-input"
-				type="search"
-				bind:value={identitySearch}
-				placeholder="Contoh: Kepala Cabang atau Pemasaran"
-				autocomplete="off"
-			/>
-			<div class="identity-groups" aria-label="Kelompok user dummy">
-				{#if identitiesLoading}
-					<p class="empty-inline" role="status">Memuat user demo…</p>
-				{:else if identitiesError}
-					<div class="identity-load-state" role="alert">
-						<p>{identitiesError}</p>
-						<button type="button" class="identity-reload" onclick={() => void loadDemoIdentities()}>Muat ulang daftar</button>
-					</div>
-				{:else if visibleIdentityGroups().length === 0}
-					<p class="empty-inline">Tidak ada user demo yang cocok dengan pencarian.</p>
-				{:else}
-					{#each visibleIdentityGroups() as group (group.key)}
-						<section class="identity-group" aria-labelledby={'identity-group-' + group.key}>
-							<div class="identity-group-heading">
-								<h3 id={'identity-group-' + group.key}>{group.label}</h3>
-								<p>{group.description}</p>
-							</div>
-							<div class="identity-list identity-group-list">
-								{#each group.identities as identity (identity.id)}
-									<button
-										type="button"
-										class="identity-option"
-										class:selected={selectedIdentityId === identity.id}
-										aria-pressed={selectedIdentityId === identity.id}
-										onclick={() => (selectedIdentityId = identity.id)}
-									>
-										<span class="identity-avatar">{initials(identity.display_name)}</span>
-										<span class="identity-copy">
-											<strong>{identity.display_name}</strong>
-										<small>{identityRoleLabel(identity)} · {identity.org_unit_name}{identity.self_assignment_available ? ' · Bisa susun KPI baru' : ''}</small>
-										</span>
-									</button>
-								{/each}
-							</div>
-						</section>
+			{#if identitiesLoading}
+				<p class="empty-inline" role="status">Memuat profil demo...</p>
+			{:else if identitiesError}
+				<div class="identity-load-state" role="alert">
+					<p>{identitiesError}</p>
+					<button type="button" class="identity-reload" onclick={() => void loadDemoIdentities()}>Muat ulang daftar</button>
+				</div>
+			{:else}
+				<label class="field-label" for="identity-profile">Pilih profil demo</label>
+				<select id="identity-profile" class="text-input identity-select" bind:value={selectedIdentityId} disabled={identities.length === 0}>
+					<option value="" disabled>Pilih nama dan jabatan</option>
+					{#each availableIdentityGroups() as group (group.key)}
+						<optgroup label={group.label}>
+							{#each group.identities as identity (identity.id)}
+								<option value={identity.id}>{identity.display_name} — {identityRoleLabel(identity)} · {identity.org_unit_name}</option>
+							{/each}
+						</optgroup>
 					{/each}
-				{/if}
-			</div>
+				</select>
+			{/if}
 
 			{#if selectedIdentity()}
 				<div class="identity-selection" role="status" aria-live="polite">
@@ -3191,106 +3793,126 @@
 			{/if}
 
 			<Button class="login-button" size="lg" disabled={busy || !selectedIdentityId} onclick={login}>
-				{busy ? 'Menyiapkan sesi…' : 'Masuk ke demo'}
+				{busy ? 'Menyiapkan sesi…' : 'Masuk'}
 			</Button>
 			{/if}
 			</section>
 		</div>
 	</main>
 {:else}
-	<div class="app-shell">
-		<aside class="sidebar" aria-label="Navigasi utama">
-			<div class="sidebar-brand">
-				<span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M8 29V11h5l7 9 7-9h5v18h-5V18l-7 9-7-9v11z"/><path class="brand-accent" d="M31 8h4v4h-4z"/></svg></span>
-				<div><strong>KPI Perbankan</strong><span>Performance workspace</span></div>
-			</div>
-			<p class="nav-caption">RUANG KERJA</p>
-			<nav class="main-nav">
-				<button class:active={view === 'overview'} aria-current={view === 'overview' ? 'page' : undefined} onclick={() => setView('overview')}>
-					<span class="nav-symbol" aria-hidden="true">▦</span><span>{canViewStaffHistory() ? 'Dashboard saya' : 'Ringkasan'}</span>
-				</button>
-				<button class:active={view === 'mine'} aria-current={view === 'mine' ? 'page' : undefined} onclick={() => void openMine()}>
-					<span class="nav-symbol" aria-hidden="true">◎</span><span>KPI saya</span>
-				</button>
-				{#if canSelfAssignRole()}
-					<button class:active={view === 'assignment'} aria-current={view === 'assignment' ? 'page' : undefined} onclick={() => void openSelfAssignment()}>
-						<span class="nav-symbol" aria-hidden="true">+</span><span>Susun KPI</span>
-					</button>
-				{/if}
-				{#if canViewStaffHistory()}
-					<button class:active={view === 'history'} aria-current={view === 'history' ? 'page' : undefined} onclick={openHistory}>
-						<span class="nav-symbol" aria-hidden="true">▤</span><span>Riwayat</span>
-					</button>
-				{/if}
-				<button class:active={view === 'reviews'} aria-current={view === 'reviews' ? 'page' : undefined} onclick={() => (canReviewInbox() ? openReviews() : setView('reviews'))}>
-					<span class="nav-symbol" aria-hidden="true">✓</span><span>{canReviewInbox() ? 'Inbox evaluasi' : 'Tinjauan'}</span>
-					{#if dashboard && dashboard.contracts_needing_action > 0}<span class="nav-count">{dashboard.contracts_needing_action}</span>{/if}
-				</button>
-				{#if hasAdminAccess()}
-					<button class:active={view === 'monitoring'} aria-current={view === 'monitoring' ? 'page' : undefined} onclick={openMonitoring}>
-						<span class="nav-symbol" aria-hidden="true">◴</span><span>Monitoring</span>
-					</button>
-					<button class:active={view === 'audit'} aria-current={view === 'audit' ? 'page' : undefined} onclick={openAuditTrail}>
-						<span class="nav-symbol" aria-hidden="true">A</span><span>Audit trail</span>
-					</button>
-					<button class:active={view === 'comparison'} aria-current={view === 'comparison' ? 'page' : undefined} onclick={openPeriodComparison}>
-						<span class="nav-symbol" aria-hidden="true">%</span><span>Banding periode</span>
-					</button>
-					<button class:active={view === 'catalog'} aria-current={view === 'catalog' ? 'page' : undefined} onclick={openCatalog}>
-						<span class="nav-symbol" aria-hidden="true">≡</span><span>Katalog KPI</span>
-					</button>
-					<button class:active={view === 'mapping'} aria-current={view === 'mapping' ? 'page' : undefined} onclick={openAssignmentMapping}>
-						<span class="nav-symbol" aria-hidden="true">↳</span><span>Penetapan</span>
-					</button>
-					<button class:active={view === 'positions'} aria-current={view === 'positions' ? 'page' : undefined} onclick={openPositions}>
-						<span class="nav-symbol" aria-hidden="true">J</span><span>Master jabatan</span>
-					</button>
-					<button class:active={view === 'ssoMappings'} aria-current={view === 'ssoMappings' ? 'page' : undefined} onclick={openSsoMappings}>
-						<span class="nav-symbol" aria-hidden="true">S</span><span>Mapping SSO</span>
-					</button>
-					<button class:active={view === 'periods'} aria-current={view === 'periods' ? 'page' : undefined} onclick={() => setView('periods')}>
-						<span class="nav-symbol" aria-hidden="true">◷</span><span>Periode KPI</span>
-					</button>
-				{/if}
-			</nav>
-			<div class="sidebar-foot">
-				<span class="demo-indicator"></span>
-				<div><strong>Lingkungan demo</strong><small>Seluruh data bersifat sintetis</small></div>
-			</div>
-		</aside>
+	<div class="app-shell" class:is-collapsed={sidebarCollapsed}>
+		<WorkspaceSidebar
+			sections={navigationSections}
+			collapsed={sidebarCollapsed}
+			mobileOpen={mobileSidebarOpen}
+			userName={currentUser.display_name}
+			userRole={roleListLabel(currentUser.access_role, currentUser.access_roles)}
+			userInitials={initials(currentUser.display_name)}
+			isDark={isDark}
+			busy={busy}
+			onToggleCollapsed={toggleSidebarCollapsed}
+			onToggleTheme={toggleTheme}
+			onLogout={logout}
+			onClose={closeMobileSidebar}
+		/>
 
 		<div class="workspace">
 			<header class="topbar">
-				<button class="theme-toggle" type="button" aria-label={isDark ? 'Gunakan tema terang' : 'Gunakan tema gelap'} onclick={toggleTheme}>{isDark ? '☀' : '◐'} <span>{isDark ? 'Terang' : 'Gelap'}</span></button>
-				<div class="breadcrumb">KPI Perbankan <span>/</span> {pageTitle()}</div>
-				<div class="user-menu">
-					<div class="user-avatar">{initials(currentUser.display_name)}</div>
-					<div class="user-details"><strong>{currentUser.display_name}</strong><span>{roleListLabel(currentUser.access_role, currentUser.access_roles)}</span></div>
-					<Button variant="outline" size="sm" disabled={busy} onclick={logout}>Keluar</Button>
+				<div class="topbar-leading">
+					<Button
+						variant="ghost"
+						size="icon"
+						class="mobile-sidebar-trigger"
+						aria-label="Buka navigasi utama"
+						aria-expanded={mobileSidebarOpen}
+						aria-controls="main-sidebar"
+						onclick={() => (mobileSidebarOpen = true)}
+					>
+						<Menu size={19} strokeWidth={1.8} aria-hidden="true" />
+					</Button>
+				<div class="breadcrumb">Tera <span>/</span> {pageTitle()}</div>
+				</div>
+				<div class="topbar-actions">
+					<Button
+						variant="ghost"
+						size="icon"
+						class="notification-button"
+						aria-label={dashboard && dashboard.contracts_needing_action > 0 ? 'Notifikasi, ' + dashboard.contracts_needing_action + ' perlu tindakan' : 'Notifikasi'}
+						title="Notifikasi dan tugas yang perlu tindakan"
+						onclick={() => (canReviewInbox() ? openReviews() : setView('reviews'))}
+					>
+						<Bell size={18} strokeWidth={1.8} aria-hidden="true" />
+						{#if dashboard && dashboard.contracts_needing_action > 0}<span class="notification-count" aria-hidden="true">{dashboard.contracts_needing_action}</span>{/if}
+					</Button>
+					<span class="user-avatar topbar-profile" role="img" aria-label={'Profil ' + currentUser.display_name} title={currentUser.display_name}>
+						<UserRound size={18} strokeWidth={1.8} aria-hidden="true" />
+					</span>
 				</div>
 			</header>
-
 			<main class="page-content">
+				{#snippet openInputCycleCards()}
+					{@const openCycles = openInputCycles()}
+					{#if openCycles.length === 0}
+						<div class="open-cycle-empty" role="status">
+							<strong>{cycles.some((cycle) => cycle.status === 'OPEN') ? 'Tidak ada periode yang perlu diisi' : 'Belum ada periode pengisian yang dibuka'}</strong>
+							<p>{cycles.some((cycle) => cycle.status === 'OPEN') ? 'Periode yang sudah diajukan dapat dilihat pada Riwayat saya.' : 'Periode KPI akan muncul di sini setelah Admin membuka pengisian.'}</p>
+						</div>
+					{:else}
+						<div class="open-cycle-list" aria-label="Daftar periode KPI yang perlu diisi">
+							{#each openCycles as cycle (cycle.id)}
+								{@const contract = existingContractForCycle(cycle)}
+								<article class="open-cycle-card">
+									<div class="open-cycle-copy">
+										<span>{periodCadenceLabel(cycleCadenceMonths(cycle))} · {formatDate(cycle.starts_at)} – {formatDate(cycle.ends_at)}</span>
+										<h3>{cycle.name}</h3>
+										<p>{contract?.status === 'REVISION' ? 'Penilai meminta perbaikan pada penilaian ini.' : contract ? 'Draf tersimpan. Lanjutkan pengisian KPI jabatan Anda.' : 'Wajib diisi. Lengkapi KPI jabatan dan lima indikator perilaku.'}</p>
+									</div>
+									<div class="open-cycle-actions">
+										<Badge variant={contract ? statusVariant(contract.status) : 'default'}>{contract ? statusNames[contract.status] : 'Wajib diisi'}</Badge>
+										<Button size="sm" onclick={() => void openSelfAssignment(cycle.id)}>{contract?.status === 'REVISION' ? 'Perbaiki KPI' : contract ? 'Lanjutkan isi KPI' : 'Isi KPI'}</Button>
+									</div>
+								</article>
+							{/each}
+						</div>
+					{/if}
+				{/snippet}
 				<div class="page-heading">
 					<div>
-						<p class="eyebrow">{view === 'periods' ? 'KONFIGURASI ADMIN' : view === 'ssoMappings' ? 'AKSES AKUN KERJA' : view === 'mapping' ? 'PENETAPAN KPI' : view === 'positions' ? 'MASTER JABATAN' : view === 'catalog' ? 'KATALOG KPI' : view === 'monitoring' ? 'MONITORING ADMIN' : view === 'audit' ? 'AUDIT TRAIL' : view === 'comparison' ? 'PERBANDINGAN PERIODE' : view === 'history' ? 'RIWAYAT PENILAIAN' : view === 'reviews' && canReviewInbox() ? 'INBOX EVALUASI' : view === 'assignment' ? (activeMonthlyCycle()?.name ?? 'PERIODE AKTIF') : (dashboard?.cycle.name ?? 'DEMO LOKAL')}</p>
+						<p class="eyebrow">{view === 'periods' || view === 'positionKpis' ? 'KONFIGURASI ADMIN' : view === 'history' ? 'RIWAYAT SAYA' : view === 'reviews' ? 'TINJAUAN PENILAIAN' : view === 'assignment' ? 'PILIH PERIODE' : view === 'mine' && canViewStaffHistory() ? staffDashboardPeriodLabel() : (dashboard?.cycle.name ?? 'KCU UTAMA')}</p>
 						<h1>{pageTitle()}</h1>
 						<p class="page-subtitle">{currentUser.org_unit_name} · {currentUser.position_name}</p>
 					</div>
-					{#if dashboard?.cycle && view !== 'assignment' && view !== 'periods' && view !== 'history' && view !== 'monitoring' && view !== 'catalog' && view !== 'mapping' && view !== 'positions' && view !== 'ssoMappings' && view !== 'audit' && view !== 'comparison'}
-						<div class="period-pill"><span class="period-dot"></span>{formatDate(dashboard.cycle.starts_at)} – {formatDate(dashboard.cycle.ends_at)}</div>
+					{#if dashboard?.cycle && view !== 'mine' && view !== 'assignment' && view !== 'periods' && view !== 'history' && view !== 'monitoring' && view !== 'catalog' && view !== 'mapping' && view !== 'positionKpis' && view !== 'positions' && view !== 'ssoMappings' && view !== 'audit' && view !== 'comparison'}
+						<div class="period-pill"><span class="period-dot"></span><span class="period-pill-copy"><span><strong>Siklus penilaian:</strong> {formatDate(dashboard.cycle.starts_at)} – {formatDate(dashboard.cycle.ends_at)}</span><small>Periode realisasi: {cycleMeasurementRange(dashboard.cycle)}</small></span></div>
 					{/if}
 				</div>
 
-				<div class="notice demo-notice" role="note">
-					<span class="notice-mark" aria-hidden="true">i</span>
-					<div><strong>Data dan rumus demo</strong><p>Target, realisasi, dan skor dibuat untuk simulasi. Nilai perilaku, nilai akhir, dan rating belum digunakan.</p></div>
+				{#if view === 'mine' && canViewStaffHistory()}
+					<nav class="staff-workspace-tabs" aria-label="Bagian KPI saya" role="tablist">
+						<button id="staff-tab-kpi" type="button" role="tab" aria-controls="staff-workspace-tab-panel" aria-selected={staffWorkspaceTab === 'KPI'} class:active={staffWorkspaceTab === 'KPI'} onclick={() => void selectStaffWorkspaceTab('KPI')}>KPI</button>
+						<button id="staff-tab-behavior" type="button" role="tab" aria-controls="staff-workspace-tab-panel" aria-selected={staffWorkspaceTab === 'BEHAVIOR'} class:active={staffWorkspaceTab === 'BEHAVIOR'} onclick={() => void selectStaffWorkspaceTab('BEHAVIOR')}>Perilaku</button>
+						<button id="staff-tab-approval" type="button" role="tab" aria-controls="staff-workspace-tab-panel" aria-selected={staffWorkspaceTab === 'APPROVAL'} class:active={staffWorkspaceTab === 'APPROVAL'} onclick={() => void selectStaffWorkspaceTab('APPROVAL')}>Periksa</button>
+						<button id="staff-tab-history" type="button" role="tab" aria-controls="staff-workspace-tab-panel" aria-selected={staffWorkspaceTab === 'HISTORY'} class:active={staffWorkspaceTab === 'HISTORY'} onclick={() => void selectStaffWorkspaceTab('HISTORY')}>Riwayat tindakan</button>
+					</nav>
+				{/if}
+
+				{#if view !== 'mine'}
+				<div class="notice scoring-notice" role="note">
+					<Info class="notice-mark" size={17} strokeWidth={1.8} aria-hidden="true" />
+							<div><strong>Bobot penilaian</strong><p>Nilai akhir terdiri dari 80% KPI jabatan dan 20% perilaku.</p></div>
 				</div>
-				{#if errorMessage}<p class="alert error-alert" role="alert">{errorMessage}</p>{/if}
-				{#if successMessage}<p class="alert success-alert" role="status">{successMessage}</p>{/if}
+				{/if}
+				{#if errorMessage || successMessage}
+					<div class="app-toast-stack" aria-live="polite">
+						{#if errorMessage}<p class="alert error-alert" role="alert">{errorMessage}</p>{/if}
+						{#if successMessage}<p class="alert success-alert" role="status">{successMessage}</p>{/if}
+					</div>
+				{/if}
 
 				{#if view === 'overview' && dashboard}
 					{#if canViewStaffHistory()}
+						{@const inputCycle = staffDashboardCycle()}
+						{@const inputContract = staffDashboardContract()}
 						<section class="staff-dashboard" aria-labelledby="staff-dashboard-title">
 							<div class="staff-dashboard-heading">
 								<div>
@@ -3298,44 +3920,52 @@
 									<h2 id="staff-dashboard-title">Fokus kerja periode aktif</h2>
 									<p class="muted-copy">Satu tempat untuk melihat apa yang sudah selesai dan tindakan KPI berikutnya.</p>
 								</div>
-								<span class="staff-track-chip">Cabang Contoh 001</span>
+								<span class="staff-track-chip">KCU Utama</span>
 							</div>
 
 							<div class="staff-dashboard-top">
 								<section class="staff-period-card" aria-labelledby="staff-period-title">
-									<div class="staff-card-heading"><span class="dashboard-label">PERIODE AKTIF</span><span class="period-status-dot"></span></div>
-									<h3 id="staff-period-title">{dashboard.cycle.name}</h3>
-									<p>{formatDate(dashboard.cycle.starts_at)} – {formatDate(dashboard.cycle.ends_at)}</p>
+									<div class="staff-card-heading"><span class="dashboard-label">PERIODE PENGISIAN</span>{#if inputCycle}<span class="period-status-dot"></span>{/if}</div>
+									<h3 id="staff-period-title">{inputCycle?.name ?? 'Tidak ada periode terbuka'}</h3>
+									<p>{inputCycle ? `${formatDate(inputCycle.starts_at)} – ${formatDate(inputCycle.ends_at)}` : 'Admin belum membuka periode pengisian.'}</p>
 									<div class="staff-period-meta"><span>Jalur</span><strong>{staffTrackLabel()}</strong></div>
 								</section>
 								<section class="staff-task-card" aria-labelledby="staff-task-title">
-									<div class="staff-card-heading"><span class="dashboard-label">TUGAS BERIKUTNYA</span><span class="task-urgency">Prioritas</span></div>
+									<div class="staff-card-heading"><span class="dashboard-label">TUGAS BERIKUTNYA</span>{#if inputCycle}<span class="task-urgency">Prioritas</span>{/if}</div>
 									<h3 id="staff-task-title">{staffDashboardTaskLabel()}</h3>
 									<p>{staffDashboardTaskDetail()}</p>
-									<div class="staff-task-footer"><span>Deadline demo</span><strong>{formatDate(dashboard.cycle.ends_at)}</strong></div>
-									{#if !staffDashboardContract() || ['DRAFT', 'REVISION'].includes(staffDashboardContract()?.status ?? '')}
-										<Button class="staff-task-button" size="sm" onclick={() => void openSelfAssignment()}>{staffDashboardContract()?.status === 'REVISION' ? 'Buka revisi' : staffDashboardContract() ? 'Lanjutkan KPI' : 'Susun KPI sekarang'}</Button>
+									<div class="staff-task-footer"><span>Batas pengisian</span><strong>{inputCycle ? formatDate(inputCycle.ends_at) : '—'}</strong></div>
+									{#if inputCycle}
+									<Button class="staff-task-button" size="sm" onclick={() => void openSelfAssignment(inputCycle.id)}>{inputContract?.status === 'REVISION' ? 'Buka revisi' : inputContract ? 'Lanjutkan KPI' : 'Mulai isi KPI'}</Button>
 									{/if}
 								</section>
 							</div>
 
 							<div class="staff-dashboard-signals" aria-label="Status KPI saya">
-								<section class="staff-signal-card">
-									<span class="dashboard-label">SELF-ASSIGNMENT</span>
-									<strong>{staffDashboardAssignmentLabel()}</strong>
-									<p>{staffDashboardAssignmentDetail()}</p>
-									{#if staffDashboardContract()}<Badge variant={statusVariant(staffDashboardContract()?.status ?? 'DRAFT')}>{statusNames[staffDashboardContract()?.status ?? 'DRAFT']}</Badge>{/if}
-								</section>
-								<section class="staff-signal-card">
-									<div class="staff-signal-heading"><span class="dashboard-label">PROGRES KPI</span><strong>{staffDashboardProgress().percent}%</strong></div>
-									<div class="dashboard-progress" aria-label={'Progres KPI ' + staffDashboardProgress().percent + ' persen'}><span style={'width: ' + staffDashboardProgress().percent + '%'}></span></div>
-									<p>{staffDashboardProgress().completed} dari {staffDashboardProgress().total} indikator lengkap.</p>
-								</section>
-								<section class="staff-signal-card">
-									<span class="dashboard-label">TARGET VS REALISASI</span>
-									<strong>{staffDashboardRealizationSummary()}</strong>
-									<p>{staffDashboardContract() ? 'Ringkasan pengisian periode aktif.' : 'Belum ada snapshot pada periode aktif.'}</p>
-								</section>
+								{#if inputContract}
+									<section class="staff-signal-card">
+										<span class="dashboard-label">PENILAIAN MANDIRI</span>
+										<strong>{staffDashboardAssignmentLabel()}</strong>
+										<p>{staffDashboardAssignmentDetail()}</p>
+										<Badge variant={inputContract.status === 'SUBMITTED' ? 'secondary' : statusVariant(inputContract.status)}>{statusNames[inputContract.status]}</Badge>
+									</section>
+									<section class="staff-signal-card">
+										<div class="staff-signal-heading"><span class="dashboard-label">PROGRES KPI</span><strong>{staffDashboardProgress().percent}%</strong></div>
+										<div class="dashboard-progress" aria-label={'Progres KPI ' + staffDashboardProgress().percent + ' persen'}><span style={'width: ' + staffDashboardProgress().percent + '%'}></span></div>
+										<p>{staffDashboardProgress().completed} dari {staffDashboardProgress().total} indikator lengkap.</p>
+									</section>
+									<section class="staff-signal-card">
+										<span class="dashboard-label">TARGET VS REALISASI</span>
+										<strong>{staffDashboardRealizationSummary()}</strong>
+										<p>Ringkasan pengisian periode aktif.</p>
+									</section>
+								{:else}
+									<section class="staff-signal-card">
+										<span class="dashboard-label">STATUS PENGISIAN</span>
+										<strong>{staffDashboardAssignmentLabel()}</strong>
+										<p>{staffDashboardAssignmentDetail()}</p>
+									</section>
+								{/if}
 							</div>
 
 							<section class="staff-history-card" aria-labelledby="staff-history-title">
@@ -3355,7 +3985,7 @@
 						</Card.Root>
 						<Card.Root class="stat-card">
 							<Card.Header><Card.Description>Siap ditinjau</Card.Description><Card.Title>{formatNumber(dashboard.counts.ready_contracts)}</Card.Title></Card.Header>
-							<Card.Content><span class="stat-note">KPI lengkap pada kontrak demo</span></Card.Content>
+							<Card.Content><span class="stat-note">KPI lengkap pada penilaian</span></Card.Content>
 						</Card.Root>
 						<Card.Root class="stat-card">
 							<Card.Header><Card.Description>Diajukan</Card.Description><Card.Title>{formatNumber(dashboard.counts.submitted_contracts)}</Card.Title></Card.Header>
@@ -3369,6 +3999,83 @@
 					{/if}
 				{/if}
 
+				{#if view === 'positionKpis' && canManageAssignment()}
+					<section class="position-version-admin" aria-labelledby="position-version-title">
+						<header class="position-version-heading">
+							<div>
+								<p class="eyebrow">ADMIN KPI / SDM</p>
+								<h2 id="position-version-title">Indikator KPI jabatan</h2>
+								<p class="muted-copy">Atur indikator, target, dan bobot untuk setiap jabatan. Perubahan paket tersimpan sebagai versi baru.</p>
+							</div>
+							<Button variant="outline" size="sm" disabled={positionKpiSettingsLoading} onclick={() => void loadPositionKpiSettings()}>{positionKpiSettingsLoading ? 'Memuat…' : 'Muat ulang'}</Button>
+						</header>
+
+						{#if positionKpiSettingsLoading}
+							<div class="position-version-empty" role="status">Memuat indikator jabatan…</div>
+						{:else if positionKpiSettings.length === 0}
+			<div class="position-version-empty" role="status"><strong>Belum ada jabatan</strong><p>Jabatan Pusat, Wilayah, dan Cabang akan tampil setelah data master dimuat.</p></div>
+						{:else}
+							{@const selectedPositionKpi = selectedPositionKpiSetting()}
+							<div class="position-version-layout">
+								<aside class="position-version-list" aria-label="Pilih jabatan">
+								<div class="position-version-list-heading"><p class="eyebrow">JABATAN ORGANISASI</p><span>{positionKpiSettings.length} jabatan</span></div>
+									{#each positionKpiSettings as position (position.id)}
+										{@const activeVersion = activePositionKpiVersion(position)}
+										<button type="button" class="position-version-list-item" class:selected={selectedPositionKpiId === position.id} aria-pressed={selectedPositionKpiId === position.id} onclick={() => selectPositionKpiSetting(position.id)}>
+											<strong>{position.name}</strong>
+											<small>{position.group_name} · {position.access_role}</small>
+											<span>{activeVersion ? `V${activeVersion.version} aktif · ${activeVersion.items.length} indikator` : 'Belum ada paket KPI'}</span>
+										</button>
+									{/each}
+								</aside>
+
+								{#if selectedPositionKpi}
+									{@const activeVersion = activePositionKpiVersion(selectedPositionKpi)}
+									<article class="position-version-detail">
+										<header class="position-version-detail-heading">
+											<div><p class="eyebrow">{selectedPositionKpi.group_name} · {selectedPositionKpi.access_role}</p><h3>{selectedPositionKpi.name}</h3><p class="muted-copy">Self-assignment pada periode yang dibuka memakai versi yang sudah dikunci untuk periode tersebut.</p></div>
+											<Badge variant={activeVersion ? 'secondary' : 'outline'}>{activeVersion ? `V${activeVersion.version} · Aktif` : 'Belum diatur'}</Badge>
+										</header>
+
+										<section class="position-version-editor" aria-label="Edit indikator paket aktif">
+											<div class="position-version-editor-heading"><div><p class="eyebrow">PAKET KPI</p><h4>{activeVersion ? `Versi V${activeVersion.version}` : 'Paket pertama'}</h4></div><span>{positionKpiDraftItems.length} indikator</span></div>
+											{#if positionKpiDraftItems.length === 0}<div class="position-version-empty"><strong>Belum ada indikator</strong><p>Tambahkan indikator untuk membuat paket V1 bagi jabatan ini.</p></div>{/if}
+											<div class="position-version-items">
+												{#each positionKpiDraftItems as item, index (item.client_id)}
+													<article class="position-version-item">
+														<div class="position-version-item-heading"><strong>Indikator {index + 1}</strong><Button type="button" variant="ghost" size="sm" disabled={positionKpiSettingsBusy} onclick={() => removePositionKpiDraftItem(item.client_id)}>Hapus</Button></div>
+														<div class="position-version-fields">
+															<label>Kode<input class="text-input" value={item.code} maxlength="80" oninput={(event) => updatePositionKpiDraftItem(item.client_id, 'code', event.currentTarget.value)} /></label>
+															<label>Nama indikator<input class="text-input" value={item.name} maxlength="160" oninput={(event) => updatePositionKpiDraftItem(item.client_id, 'name', event.currentTarget.value)} /></label>
+															<label>Jenis pengukuran<select class="text-input" value={item.score_type} onchange={(event) => updatePositionKpiDraftItem(item.client_id, 'score_type', event.currentTarget.value)}><option value="A">A · Makin tinggi</option><option value="Q">Q · Kualitas</option><option value="L">L · Makin rendah</option><option value="Z">Z · Tanpa target</option></select></label>
+															<label>Target<input class="text-input" type="number" min={item.score_type === 'Z' ? 0 : 0.01} max={['Q', 'L'].includes(item.score_type) ? 100 : undefined} step="any" value={item.target} disabled={item.score_type === 'Z'} oninput={(event) => updatePositionKpiDraftItem(item.client_id, 'target', event.currentTarget.value)} /></label>
+															<label>Satuan<input class="text-input" value={item.unit} maxlength="40" oninput={(event) => updatePositionKpiDraftItem(item.client_id, 'unit', event.currentTarget.value)} /></label>
+															<label>Bobot (%)<input class="text-input" type="number" min="0.01" max="100" step="0.01" value={item.weight_percent} oninput={(event) => updatePositionKpiDraftItem(item.client_id, 'weight_percent', event.currentTarget.value)} /></label>
+														</div>
+														<label class="position-version-description">Keterangan indikator<textarea class="text-input textarea-input" rows="2" maxlength="3000" value={item.definition} oninput={(event) => updatePositionKpiDraftItem(item.client_id, 'definition', event.currentTarget.value)}></textarea></label>
+													</article>
+												{/each}
+											</div>
+											<div class="position-version-add"><Button type="button" variant="outline" size="sm" disabled={positionKpiSettingsBusy} onclick={addPositionKpiDraftItem}>Tambah indikator</Button><span>Total bobot <strong class:assignment-total-valid={Math.abs(positionKpiWeightTotal() - 100) < 0.011}>{formatNumber(positionKpiWeightTotal(), 2)}%</strong> dari 100%</span></div>
+											{#if positionKpiSaveBlockedReason()}<p class="position-version-validation" role="status">{positionKpiSaveBlockedReason()}</p>{/if}
+										<div class="position-version-save"><p>{activeVersion ? `Simpan perubahan akan membuat V${activeVersion.version + 1}. Periode yang sudah dibuka tetap memakai versi terkunci; versi lama tetap tersimpan.` : 'Simpan paket pertama sebagai V1.'}</p><Button disabled={positionKpiSettingsBusy || Boolean(positionKpiSaveBlockedReason())} onclick={() => void savePositionKpiSettings()}>{positionKpiSettingsBusy ? 'Menyimpan…' : activeVersion ? `Simpan sebagai V${activeVersion.version + 1}` : 'Simpan paket V1'}</Button></div>
+										</section>
+
+										<details class="position-version-history">
+											<summary>Riwayat versi · {selectedPositionKpi.versions.filter((version) => version.status === 'ARCHIVED').length} versi sebelumnya</summary>
+											{#if selectedPositionKpi.versions.filter((version) => version.status === 'ARCHIVED').length === 0}<p>Versi lama akan tampil setelah paket pertama diperbarui.</p>{:else}
+												{#each selectedPositionKpi.versions.filter((version) => version.status === 'ARCHIVED') as version (version.id)}
+													<article><div><strong>V{version.version}</strong><span>{version.items.length} indikator · {version.created_at ? formatDate(version.created_at) : 'Tanggal tidak tersedia'}</span></div><ul>{#each version.items as item (item.definition_id)}<li><span>{item.code} · {item.name}</span><small>Target {formatNumber(item.target, 2)} {item.unit} · Bobot {formatNumber(item.weight_percent, 2)}%</small></li>{/each}</ul></article>
+												{/each}
+											{/if}
+										</details>
+									</article>
+								{/if}
+							</div>
+						{/if}
+					</section>
+				{/if}
+
 				{#if view === 'mapping' && canManageAssignment()}
 					<section class="mapping-panel" aria-labelledby="mapping-title">
 						<div class="mapping-heading">
@@ -3377,7 +4084,7 @@
 								<h2 id="mapping-title">Penetapan KPI ke jabatan</h2>
 								<p class="muted-copy">Pilih indikator Aktif dari katalog, sesuaikan target dan bobot, lalu periksa paket yang akan muncul pada self-assignment.</p>
 							</div>
-							<div class="mapping-state-note"><strong>{assignmentSaveState === 'SAVED' ? 'Tersimpan dummy' : 'Draf penetapan'}</strong><span>Belum mengubah API Laravel.</span></div>
+				<div class="mapping-state-note"><strong>{assignmentSaveState === 'SAVED' ? 'Tersimpan untuk preview' : 'Draf penetapan'}</strong><span>Belum mengubah API Laravel.</span></div>
 						</div>
 
 						<div class="mapping-context-bar">
@@ -3409,7 +4116,7 @@
 							</section>
 
 							<aside class="mapping-preview" aria-labelledby="mapping-preview-title">
-								<div class="mapping-section-heading"><div><p class="eyebrow">PREVIEW SELF-ASSIGNMENT</p><h3 id="mapping-preview-title">Paket KPI {catalogTrackLabel(assignmentTrack)}</h3></div><span>{assignmentSaveState === 'SAVED' ? 'Dummy tersimpan' : 'Belum disimpan'}</span></div>
+				<div class="mapping-section-heading"><div><p class="eyebrow">PREVIEW SELF-ASSIGNMENT</p><h3 id="mapping-preview-title">Paket KPI {catalogTrackLabel(assignmentTrack)}</h3></div><span>{assignmentSaveState === 'SAVED' ? 'Preview tersimpan' : 'Belum disimpan'}</span></div>
 								<div class="mapping-preview-intro"><strong>Yang akan dilihat staf</strong><p>Indikator Aktif di bawah akan muncul sebagai pilihan KPI untuk jabatan ini.</p></div>
 								{#if selectedAssignmentItems().length === 0}
 									<div class="mapping-preview-empty"><strong>Belum ada KPI dipilih</strong><p>Pilih minimal satu indikator dari daftar sebelah kiri.</p></div>
@@ -3421,10 +4128,10 @@
 									</div>
 								{/if}
 								<div class="mapping-preview-total"><span>Status bobot</span><strong class:assignment-total-valid={Math.abs(assignmentWeightTotal() - 100) < 0.01}>{assignmentWeightStatus()}</strong><small>Total {formatNumber(assignmentWeightTotal(), 2)}% dari 100%.</small></div>
-								<Button class="mapping-save-button" disabled={selectedAssignmentItems().length === 0 || Math.abs(assignmentWeightTotal() - 100) >= 0.01} onclick={saveDemoAssignmentMapping}>Simpan penetapan dummy</Button>
+				<Button class="mapping-save-button" disabled={selectedAssignmentItems().length === 0 || Math.abs(assignmentWeightTotal() - 100) >= 0.01} onclick={saveDemoAssignmentMapping}>Simpan preview penetapan</Button>
 							</aside>
 						</div>
-						<p class="mapping-footnote">Penetapan ini menjadi preview kebijakan per jabatan. Data demo belum memengaruhi self-assignment staf sampai backend dan aturan inheritance dikunci.</p>
+						<p class="mapping-footnote">Penetapan ini menjadi preview kebijakan per jabatan. Pengaturan KPI untuk jabatan akan tersedia di langkah berikutnya.</p>
 					</section>
 				{/if}
 
@@ -3456,7 +4163,7 @@
 									<label for="sso-external-employee-id">ID pegawai SSO
 										<input id="sso-external-employee-id" class="text-input" bind:value={ssoMappingExternalId} maxlength="80" autocomplete="off" placeholder="Contoh: 102-121" required />
 									</label>
-									<label for="sso-target-employee">User KPI demo
+									<label for="sso-target-employee">Profil pegawai
 										<select id="sso-target-employee" class="text-input" bind:value={ssoMappingTargetId} required>
 											<option value="" disabled>Pilih identitas yang cocok</option>
 											{#each ssoMappingCandidates as candidate (candidate.employee_id)}
@@ -3496,7 +4203,7 @@
 							<div>
 								<p class="eyebrow">ADMIN KPI / SDM</p>
 								<h2 id="position-mapping-title">Master jabatan dan mapping KPI</h2>
-								<p class="muted-copy">Pilih jabatan untuk membaca organisasi dan indikator Aktif yang sudah dipetakan pada data demo.</p>
+								<p class="muted-copy">Pilih jabatan untuk membaca organisasi dan indikator aktif pada katalog KPI.</p>
 							</div>
 							<div class="position-heading-actions"><div class="position-readonly-note"><strong>Frontend-only</strong><span>Belum tersambung API Laravel.</span></div><Button size="sm" onclick={openPositionCreate}>Tambah jabatan</Button></div>
 						</div>
@@ -3546,7 +4253,7 @@
 									<div class="position-mapping-total"><span>Total bobot mapping</span><strong>{formatNumber(positionMappingTotal(selectedPosition()), 2)}%</strong><small>Snapshot demo, tidak dapat diedit dari layar ini.</small></div>
 								{/if}
 								{#if positionDeactivateId === selectedPosition().id}
-									<div class="position-deactivate-confirm" role="alert"><div><strong>Nonaktifkan jabatan ini?</strong><p>Jabatan tetap tersimpan di data demo, tetapi tidak lagi menjadi pilihan aktif untuk mapping berikutnya.</p></div><div class="position-confirm-actions"><Button variant="outline" size="sm" onclick={cancelPositionDeactivation}>Batal</Button><Button variant="destructive" size="sm" onclick={confirmPositionDeactivation}>Ya, nonaktifkan</Button></div></div>
+									<div class="position-deactivate-confirm" role="alert"><div><strong>Nonaktifkan jabatan ini?</strong><p>Jabatan tetap tersimpan, tetapi tidak lagi menjadi pilihan aktif untuk mapping berikutnya.</p></div><div class="position-confirm-actions"><Button variant="outline" size="sm" onclick={cancelPositionDeactivation}>Batal</Button><Button variant="destructive" size="sm" onclick={confirmPositionDeactivation}>Ya, nonaktifkan</Button></div></div>
 								{/if}
 								<p class="position-detail-footnote">Target dan bobot di atas adalah inherited read-only. Perubahan kebijakan dilakukan Admin melalui Penetapan KPI dan akan menjadi langkah berikutnya untuk API.</p>
 							</article>
@@ -3554,16 +4261,16 @@
 
 						{#if positionEditorOpen}
 							<section class="position-editor-panel" aria-labelledby="position-editor-title">
-								<div class="position-editor-heading"><div><p class="eyebrow">{positionEditorMode === 'CREATE' ? 'CREATE DUMMY' : 'UPDATE DUMMY'}</p><h3 id="position-editor-title">{positionEditorTitle()}</h3><p>Perubahan hanya tersimpan di browser selama sesi demo.</p></div><Button variant="outline" size="sm" onclick={closePositionEditor}>Tutup editor</Button></div>
+				<div class="position-editor-heading"><div><p class="eyebrow">{positionEditorMode === 'CREATE' ? 'BUAT JABATAN' : 'EDIT JABATAN'}</p><h3 id="position-editor-title">{positionEditorTitle()}</h3><p>Perubahan hanya tersimpan di browser selama sesi ini.</p></div><Button variant="outline" size="sm" onclick={closePositionEditor}>Tutup editor</Button></div>
 								<form class="position-editor-form" onsubmit={(event) => { event.preventDefault(); savePositionDemo(); }}>
-									<div class="position-editor-fields"><label>Nama jabatan<input id="position-form-name" class="text-input" bind:value={positionFormName} placeholder="Contoh: Kepala Sub Bidang Dana" required /></label><label>Level<input class="text-input" bind:value={positionFormLevel} placeholder="Contoh: Supervisor 2" required /></label><label>Organisasi<input class="text-input" bind:value={positionFormOrgUnit} placeholder="Contoh: Cabang Contoh 001" required /></label><label>Cakupan kerja<input class="text-input" bind:value={positionFormScope} placeholder="Contoh: Pengawasan dana cabang" required /></label><label>Jalur mapping<select class="text-input" value={positionFormTrack} onchange={(event) => changePositionFormTrack(event.currentTarget.value as DemoPositionTrack)}><option value="BUSINESS">Pemasaran / Bisnis</option><option value="NON_BUSINESS">Operasional / Non-bisnis</option><option value="BOTH">Gabungan Pemasaran + Operasional</option></select></label><label>Status<select class="text-input" bind:value={positionFormStatus}><option value="ACTIVE">Aktif</option><option value="INACTIVE">Nonaktif</option></select></label></div>
+									<div class="position-editor-fields"><label>Nama jabatan<input id="position-form-name" class="text-input" bind:value={positionFormName} placeholder="Contoh: Kepala Sub Bidang Dana" required /></label><label>Level<input class="text-input" bind:value={positionFormLevel} placeholder="Contoh: Supervisor 2" required /></label><label>Organisasi<input class="text-input" bind:value={positionFormOrgUnit} placeholder="Contoh: KCU Utama" required /></label><label>Cakupan kerja<input class="text-input" bind:value={positionFormScope} placeholder="Contoh: Pengawasan dana cabang" required /></label><label>Jalur mapping<select class="text-input" value={positionFormTrack} onchange={(event) => changePositionFormTrack(event.currentTarget.value as DemoPositionTrack)}><option value="BUSINESS">Pemasaran / Bisnis</option><option value="NON_BUSINESS">Operasional / Non-bisnis</option><option value="BOTH">Gabungan Pemasaran + Operasional</option></select></label><label>Status<select class="text-input" bind:value={positionFormStatus}><option value="ACTIVE">Aktif</option><option value="INACTIVE">Nonaktif</option></select></label></div>
 									<div class="position-editor-mapping"><div class="position-editor-section-heading"><div><p class="eyebrow">MAPPING KPI</p><h4>Pilih indikator Aktif</h4></div><span>{positionFormSelectedIds.length} dipilih</span></div>{#if positionFormCatalogItems().length === 0}<div class="position-editor-empty" role="status"><strong>Belum ada indikator Aktif</strong><p>Aktifkan indikator dari Katalog KPI sebelum membuat mapping untuk jabatan ini.</p></div>{:else}<div class="position-editor-kpi-list">{#each positionFormCatalogItems() as item (item.id)}<article class="position-editor-kpi" class:selected={positionFormSelectedIds.includes(item.id)}><label class="position-editor-kpi-choice"><input type="checkbox" checked={positionFormSelectedIds.includes(item.id)} onchange={(event) => togglePositionFormItem(item.id, event.currentTarget.checked)} /><span><strong>{item.name}</strong><small>{item.code} / {catalogTrackLabel(item.track)} / {item.unit}</small></span></label>{#if positionFormSelectedIds.includes(item.id)}<div class="position-editor-kpi-fields"><label>Target<input class="text-input" type="number" min="0.01" step="any" value={positionFormTargets[item.id] ?? String(item.target)} oninput={(event) => updatePositionFormTarget(item.id, event.currentTarget.value)} /></label><label>Bobot (%)<input class="text-input" type="number" min="0.01" max="100" step="0.01" value={positionFormWeights[item.id] ?? String(Math.round(item.weight * 10000) / 100)} oninput={(event) => updatePositionFormWeight(item.id, event.currentTarget.value)} /></label></div>{/if}</article>{/each}</div>{/if}</div>
 									<div class="position-editor-preview" role="status" aria-live="polite"><div class="position-editor-section-heading"><div><p class="eyebrow">PREVIEW SELF-ASSIGNMENT</p><h4>Yang akan tampil ke staf</h4></div><span>{positionFormSelectedItems().length} KPI</span></div>{#if positionFormSelectedItems().length === 0}<p class="position-editor-preview-empty">Belum ada indikator dipilih. Setelah disimpan, staf akan melihat empty state mapping.</p>{:else}<div class="position-editor-preview-list">{#each positionFormSelectedItems() as item (item.id)}<div><span><strong>{item.name}</strong><small>{item.unit}</small></span><span>Target {positionFormTargets[item.id] ?? item.target} · Bobot {positionFormWeights[item.id] ?? Math.round(item.weight * 10000) / 100}%</span></div>{/each}</div>{/if}<p class="position-editor-preview-footnote">Preview ini mengikuti perubahan form saat ini dan baru menjadi sumber self-assignment setelah tombol simpan digunakan.</p></div>
-									<div class="position-editor-footer"><p><strong>{positionFormWeightStatus()}</strong><span>Total bobot {formatNumber(positionFormWeightTotal(), 2)}% dari 100%.</span><small class="position-editor-preview-note">Preview self-assignment berubah setelah disimpan.</small></p><div><Button type="button" variant="outline" onclick={closePositionEditor}>Batal</Button><Button type="submit">Simpan jabatan dummy</Button></div></div>
+				<div class="position-editor-footer"><p><strong>{positionFormWeightStatus()}</strong><span>Total bobot {formatNumber(positionFormWeightTotal(), 2)}% dari 100%.</span><small class="position-editor-preview-note">Preview self-assignment berubah setelah disimpan.</small></p><div><Button type="button" variant="outline" onclick={closePositionEditor}>Batal</Button><Button type="submit">Simpan jabatan</Button></div></div>
 								</form>
 							</section>
 						{/if}
-						<p class="position-mapping-footnote">Master jabatan ini membatasi konteks organisasi pada Cabang Contoh 001 dan dua divisi demo. Semua data masih sintetis untuk validasi UI/UX.</p>
+								<p class="position-mapping-footnote">Master jabatan ini membatasi konteks organisasi pada KCU Utama.</p>
 					</section>
 				{/if}
 
@@ -3575,7 +4282,7 @@
 								<h2 id="catalog-title">Katalog KPI dan target</h2>
 								<p class="muted-copy">Kelola indikator yang boleh dipilih staf pada jalur Pemasaran dan Operasional.</p>
 							</div>
-							<div class="catalog-demo-note"><strong>Data sintetis</strong><span>Perubahan hanya tersimpan di browser.</span></div>
+							<div class="catalog-demo-note"><strong>KCU Utama</strong><span>Perubahan hanya tersimpan di browser.</span></div>
 						</div>
 
 						<div class="catalog-summary" aria-label="Ringkasan katalog KPI">
@@ -3592,7 +4299,7 @@
 
 						<div class="catalog-layout">
 							<section class="catalog-list-panel" aria-labelledby="catalog-list-title">
-								<div class="catalog-section-heading"><div><p class="eyebrow">KATALOG DEMO</p><h3 id="catalog-list-title">Indikator tersedia</h3></div><span>Target dan bobot contoh</span></div>
+								<div class="catalog-section-heading"><div><p class="eyebrow">KATALOG KPI</p><h3 id="catalog-list-title">Indikator tersedia</h3></div><span>Target dan bobot contoh</span></div>
 								{#if visibleCatalogItems().length === 0}
 									<div class="catalog-empty" role="status"><strong>Tidak ada indikator sesuai filter</strong><p>Ganti jalur atau status untuk melihat indikator lain.</p></div>
 								{:else}
@@ -3608,15 +4315,15 @@
 							</section>
 
 							<form class="catalog-form" onsubmit={(event) => { event.preventDefault(); saveDemoCatalogItem(); }}>
-								<div class="catalog-section-heading"><div><p class="eyebrow">TAMBAH DUMMY</p><h3>Tambah indikator</h3></div><span>Frontend-only</span></div>
+								<div class="catalog-section-heading"><div><p class="eyebrow">KATALOG KPI</p><h3>Tambah indikator</h3></div><span>Belum tersambung</span></div>
 								<label class="catalog-field">Jalur<select class="text-input" bind:value={catalogFormTrack}><option value="BUSINESS">Pemasaran / Bisnis</option><option value="NON_BUSINESS">Operasional / Non-bisnis</option></select></label>
-								<div class="catalog-field-grid"><label class="catalog-field">Kode <span class="catalog-optional">Opsional</span><input class="text-input" bind:value={catalogFormCode} placeholder="Contoh: DEMO-P-05" /></label><label class="catalog-field">Kelompok<input class="text-input" bind:value={catalogFormGroup} placeholder="Contoh: Dana" required /></label></div>
-								<label class="catalog-field">Nama indikator<input class="text-input" bind:value={catalogFormName} placeholder="Contoh: Aktivitas nasabah demo" required /></label>
+								<div class="catalog-field-grid"><label class="catalog-field">Kode <span class="catalog-optional">Opsional</span><input class="text-input" bind:value={catalogFormCode} placeholder="Contoh: KPI-P-05" /></label><label class="catalog-field">Kelompok<input class="text-input" bind:value={catalogFormGroup} placeholder="Contoh: Dana" required /></label></div>
+								<label class="catalog-field">Nama indikator<input class="text-input" bind:value={catalogFormName} placeholder="Contoh: Aktivitas layanan nasabah" required /></label>
 								<div class="catalog-field-grid"><label class="catalog-field">Tipe<select class="text-input" bind:value={catalogFormType}><option value="Q">Kuantitatif</option><option value="N">Numerik durasi</option><option value="L">Batas maksimum</option><option value="Z">Zero tolerance</option></select></label><label class="catalog-field">Unit<input class="text-input" bind:value={catalogFormUnit} placeholder="%, rekening, menit" required /></label></div>
 								<div class="catalog-field-grid"><label class="catalog-field">Target<input class="text-input" type="number" min={catalogFormType === 'Z' ? 0 : 0.01} max={['Q', 'L'].includes(catalogFormType) ? 100 : undefined} step="any" bind:value={catalogFormTarget} placeholder="100" required /></label><label class="catalog-field">Bobot (%)<input class="text-input" type="number" min="0.01" max="100" step="0.01" bind:value={catalogFormWeight} placeholder="20" required /></label></div>
-								<label class="catalog-field">Sumber data demo<input class="text-input" bind:value={catalogFormSource} placeholder="Contoh: Rekap core demo" required /></label>
+								<label class="catalog-field">Sumber data<input class="text-input" bind:value={catalogFormSource} placeholder="Contoh: Rekap sistem operasional" required /></label>
 								<label class="catalog-field">State awal<select class="text-input" bind:value={catalogFormState}><option value="DRAFT">Draft</option><option value="ACTIVE">Aktif</option></select></label>
-								<div class="catalog-form-footer"><p><strong>Belum tersambung API</strong><span>Simpan hanya untuk sesi demo ini.</span></p><Button type="submit">Simpan indikator dummy</Button></div>
+								<div class="catalog-form-footer"><p><strong>Belum tersambung API</strong><span>Perubahan belum disimpan ke server.</span></p><Button type="submit">Simpan indikator</Button></div>
 							</form>
 						</div>
 						<p class="catalog-footnote">Katalog aktif menjadi sumber self-assignment. Target dan bobot di layar ini masih contoh desain, belum menjadi kebijakan KPI resmi.</p>
@@ -3638,7 +4345,7 @@
 		{/if}
 
 						<div class="monitoring-stat-grid" aria-label="Ringkasan monitoring KPI">
-							<div class="monitoring-stat-card"><span>Total kontrak</span><strong>{monitoringRecordsForPeriod().length}</strong><small>Cabang Contoh 001 · {selectedAdminPeriodLabel()}</small></div>
+							<div class="monitoring-stat-card"><span>Total kontrak</span><strong>{monitoringRecordsForPeriod().length}</strong><small>KCU Utama · {selectedAdminPeriodLabel()}</small></div>
 							<div class="monitoring-stat-card monitoring-stat-warn"><span>Menunggu review</span><strong>{monitoringStatusCount('SUBMITTED')}</strong><small>Perlu keputusan Kepala Cabang</small></div>
 							<div class="monitoring-stat-card monitoring-stat-danger"><span>Melewati deadline</span><strong>{monitoringOverdueCount()}</strong><small>Perlu perhatian Admin</small></div>
 							<div class="monitoring-stat-card monitoring-stat-ready"><span>Siap finalisasi</span><strong>{monitoringStatusCount('VERIFIED')}</strong><small>Sudah diverifikasi reviewer</small></div>
@@ -3659,7 +4366,7 @@
 									<div class="monitoring-track-row"><div><strong>Pemasaran / Bisnis</strong><small>{monitoringTrackCount('BUSINESS')} kontrak</small></div><span class="monitoring-track-bar"><i style={'width: ' + (monitoringRecordsForPeriod().length ? (monitoringTrackCount('BUSINESS') / monitoringRecordsForPeriod().length) * 100 : 0) + '%'}></i></span></div>
 									<div class="monitoring-track-row"><div><strong>Operasional / Non-bisnis</strong><small>{monitoringTrackCount('NON_BUSINESS')} kontrak</small></div><span class="monitoring-track-bar"><i style={'width: ' + (monitoringRecordsForPeriod().length ? (monitoringTrackCount('NON_BUSINESS') / monitoringRecordsForPeriod().length) * 100 : 0) + '%'}></i></span></div>
 								</div>
-								<p class="monitoring-card-footnote">Cakupan demo saat ini hanya Cabang Contoh 001.</p>
+							<p class="monitoring-card-footnote">Cakupan saat ini hanya KCU Utama.</p>
 							</section>
 						</div>
 
@@ -3670,18 +4377,63 @@
 								<label>Status<select class="text-input" bind:value={monitoringStatusFilter}><option value="ALL">Semua status aktif</option><option value="DRAFT">Draf</option><option value="SUBMITTED">Diajukan</option><option value="REVISION">Revisi</option><option value="VERIFIED">Terverifikasi</option><option value="FINAL">Final</option></select></label>
 							</div>
 							{#if visibleMonitoringRecords().length === 0}
-								<div class="monitoring-empty" role="status"><strong>Tidak ada kontrak sesuai filter</strong><p>Periode, jalur, atau status ini belum memiliki kontrak pada data demo.</p></div>
+								<div class="monitoring-empty" role="status"><strong>Tidak ada penilaian sesuai filter</strong><p>Periode, jalur, atau status ini belum memiliki penilaian.</p></div>
 							{:else}
 								<div class="table-scroll monitoring-table-scroll">
 									<table class="monitoring-table"><thead><tr><th scope="col">Pegawai</th><th scope="col">Jalur / periode</th><th scope="col">Status</th><th scope="col">Deadline</th><th scope="col">Perhatian</th><th scope="col"><span class="sr-only">Audit</span></th></tr></thead><tbody>
 										{#each visibleMonitoringRecords() as record (record.id)}
-											<tr><td><strong class="table-primary">{record.employeeName}</strong><span class="table-secondary">{record.positionName}</span></td><td><strong class="table-primary">{monitoringTrackLabel(record.track)}</strong><span class="table-secondary">{record.periodName}</span></td><td><Badge variant={statusVariant(record.status)}>{statusNames[record.status]}</Badge></td><td><span class={'monitoring-deadline ' + monitoringAgeTone(record)}>{formatDate(record.dueAt)}</span><span class="table-secondary">{record.submittedAt ? 'Diajukan ' + formatDate(record.submittedAt) : 'Belum diajukan'}</span></td><td><strong class="monitoring-attention">{record.attention}</strong><span class="table-secondary">{record.score === null ? 'Skor belum dihitung' : 'Skor demo ' + formatNumber(record.score, 1)}</span></td><td class="monitoring-table-action"><Button variant="outline" size="sm" aria-label={'Lihat audit ' + record.employeeName} onclick={() => openAuditForMonitoring(record)}>Lihat audit</Button></td></tr>
+											<tr><td><strong class="table-primary">{record.employeeName}</strong><span class="table-secondary">{record.positionName}</span></td><td><strong class="table-primary">{monitoringTrackLabel(record.track)}</strong><span class="table-secondary">{record.periodName}</span></td><td><Badge variant={statusVariant(record.status)}>{statusNames[record.status]}</Badge></td><td><span class={'monitoring-deadline ' + monitoringAgeTone(record)}>{formatDate(record.dueAt)}</span><span class="table-secondary">{record.submittedAt ? 'Diajukan ' + formatDate(record.submittedAt) : 'Belum diajukan'}</span></td><td><strong class="monitoring-attention">{record.attention}</strong><span class="table-secondary">{record.score === null ? 'Skor belum dihitung' : 'Skor KPI ' + formatNumber(record.score, 1)}</span></td><td class="monitoring-table-action"><Button variant="outline" size="sm" aria-label={'Lihat audit ' + record.employeeName} onclick={() => openAuditForMonitoring(record)}>Lihat audit</Button></td></tr>
 										{/each}
 									</tbody></table>
 								</div>
 							{/if}
 						</section>
-						<p class="monitoring-footnote">Data monitoring ini sintetis dan belum menggantikan laporan resmi. Admin hanya melihat ringkasan operasional pada step ini.</p>
+							<p class="monitoring-footnote">Ringkasan ini menampilkan progres penilaian di KCU Utama.</p>
+					</section>
+				{/if}
+
+				{#if view === 'auditLog' && canViewAuditTrail()}
+					<section class="audit-log-panel" aria-labelledby="audit-log-title">
+						<div class="audit-log-heading">
+							<div>
+								<p class="eyebrow">ADMIN KPI / SDM</p>
+								<h2 id="audit-log-title">Audit log</h2>
+								<p class="muted-copy">Catatan akses menu dan perubahan penilaian seluruh pengguna.</p>
+							</div>
+							<strong>{adminAuditMeta.total} kejadian</strong>
+						</div>
+						<form class="audit-log-filters" onsubmit={(event) => { event.preventDefault(); void loadAdminAuditLog(1); }}>
+							<label>Pengguna<input class="text-input" bind:value={adminAuditSearch} placeholder="Nama atau ID pegawai" /></label>
+							<label>Aktivitas<select class="text-input" bind:value={adminAuditAction}><option value="">Semua aktivitas</option><option value="MENU_ACCESSED">Akses menu</option><option value="API_ACTION">Perubahan data</option></select></label>
+							<label>Dari<input class="text-input" type="date" bind:value={adminAuditFrom} /></label>
+							<label>Sampai<input class="text-input" type="date" bind:value={adminAuditTo} /></label>
+							<Button size="sm" type="submit" disabled={adminAuditLoading}>{adminAuditLoading ? 'Memuat…' : 'Terapkan filter'}</Button>
+						</form>
+						{#if adminAuditFailed}
+							<div class="audit-log-empty" role="alert"><strong>Audit log belum dapat dimuat</strong><p>Periksa koneksi, lalu coba muat ulang.</p><Button size="sm" variant="outline" onclick={() => void loadAdminAuditLog(adminAuditMeta.page)}>Muat ulang</Button></div>
+						{:else if adminAuditLoading && adminAuditEvents.length === 0}
+							<p class="audit-log-state" role="status">Memuat aktivitas pengguna…</p>
+						{:else if adminAuditEvents.length === 0}
+							<div class="audit-log-empty"><strong>Belum ada aktivitas</strong><p>Aktivitas menu dan perubahan penilaian akan muncul di sini.</p></div>
+						{:else}
+							<div class="audit-log-table-wrap">
+								<table class="audit-log-table">
+									<thead><tr><th>Pengguna</th><th>Aktivitas</th><th>Menu / data</th><th>Waktu</th><th>Catatan</th></tr></thead>
+									<tbody>
+										{#each adminAuditEvents as event (event.id)}
+											<tr>
+												<td><strong>{event.actor_name}</strong><small>{event.actor_id}{event.actor_position_name ? ` · ${event.actor_position_name}` : ''}{event.actor_org_unit_name ? ` · ${event.actor_org_unit_name}` : ''}</small></td>
+												<td>{event.action === 'MENU_ACCESSED' ? 'Membuka menu' : event.action === 'API_ACTION' ? `Perubahan data · ${String(event.after?.method ?? '')}` : auditActionLabel(event.action)}</td>
+												<td>{event.object_type === 'MENU' ? String(event.after?.menu_label ?? event.object_id) : event.object_type === 'API_ENDPOINT' ? event.object_id.replace('api/v1/', '') : `${event.object_type} · ${event.object_id}`}</td>
+												<td>{formatDateTime(event.occurred_at)}</td>
+												<td>{event.reason ?? auditChangeLabel(event) ?? (event.object_type === 'MENU' && event.after?.previous_menu ? `Dari ${String(event.after.previous_menu_label ?? event.after.previous_menu)}` : '—')}</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+							<div class="audit-log-pagination"><span>Halaman {adminAuditMeta.page} dari {adminAuditMeta.last_page}</span><div><Button size="sm" variant="outline" disabled={adminAuditLoading || adminAuditMeta.page <= 1} onclick={() => void loadAdminAuditLog(adminAuditMeta.page - 1)}>Sebelumnya</Button><Button size="sm" variant="outline" disabled={adminAuditLoading || adminAuditMeta.page >= adminAuditMeta.last_page} onclick={() => void loadAdminAuditLog(adminAuditMeta.page + 1)}>Berikutnya</Button></div></div>
+						{/if}
 					</section>
 				{/if}
 
@@ -3693,7 +4445,7 @@
 								<h2 id="audit-trail-title">Audit trail keputusan</h2>
 								<p class="muted-copy">Baca jejak verifikasi reviewer dan penguncian final tanpa mengubah snapshot penilaian.</p>
 							</div>
-							<div class="audit-trail-tools"><label class="admin-period-selector">Filter periode<select class="text-input" bind:value={adminPeriodFilter}><option value="ALL">Semua periode</option>{#each demoPeriods as period (period.id)}<option value={period.id}>{period.name}</option>{/each}</select></label><div class="audit-trail-context"><span>PERIODE TERPILIH</span><strong>{visibleAuditTrailEntries().length} kejadian</strong><small>{selectedAdminPeriodLabel()} · Cabang Contoh 001</small></div></div>
+							<div class="audit-trail-tools"><label class="admin-period-selector">Filter periode<select class="text-input" bind:value={adminPeriodFilter}><option value="ALL">Semua periode</option>{#each demoPeriods as period (period.id)}<option value={period.id}>{period.name}</option>{/each}</select></label><div class="audit-trail-context"><span>PERIODE TERPILIH</span><strong>{visibleAuditTrailEntries().length} kejadian</strong><small>{selectedAdminPeriodLabel()} · KCU Utama</small></div></div>
 						</div>
 						{#if auditTrailFocus}
 							<div class="audit-trail-focus" role="status"><div><span class="dashboard-label">{auditTrailFocus.origin === 'COMPARISON_DRILLDOWN' ? 'KONTEKS DARI DRILL-DOWN' : 'KONTEKS DARI MONITORING'}</span><strong>{auditTrailFocus.employeeName}</strong><p>{monitoringTrackLabel(auditTrailFocus.track)} Â· {auditTrailFocus.periodName} Â· Status monitoring {statusNames[auditTrailFocus.status]}</p></div><Button variant="outline" size="sm" onclick={openAuditTrail}>Lihat semua audit</Button></div>
@@ -3711,7 +4463,7 @@
 								<div class="audit-contract-summary-facts">
 									<div><span>Jalur</span><strong>{monitoringTrackLabel(auditContractSummary()?.track ?? 'BUSINESS')}</strong></div>
 									<div><span>Periode</span><strong>{auditContractSummary()?.periodName}</strong></div>
-									<div><span>Skor demo</span><strong>{auditContractSummary()?.score === null ? 'Belum dihitung' : formatNumber(auditContractSummary()?.score ?? null, 1)}</strong></div>
+									<div><span>Skor KPI</span><strong>{auditContractSummary()?.score === null ? 'Belum dihitung' : formatNumber(auditContractSummary()?.score ?? null, 1)}</strong></div>
 									<div><span>Reviewer</span><strong>{auditContractSummary()?.reviewerName ?? 'Belum tersedia'}</strong></div>
 									<div><span>Diajukan</span><strong>{auditContractSummary()?.submittedAt ? formatDate(auditContractSummary()?.submittedAt ?? '') : 'Belum tersedia'}</strong></div>
 									<div><span>Final</span><strong>{auditContractSummary()?.finalDate ? formatDate(auditContractSummary()?.finalDate ?? '') : 'Belum final'}</strong></div>
@@ -3726,7 +4478,7 @@
 						</div>
 
 						{#if visibleAuditTrailEntries().length === 0}
-							<div class="audit-trail-empty" role="status"><strong>Belum ada audit trail sesuai filter</strong><p>Perubahan filter akan menampilkan kejadian demo yang tersedia.</p></div>
+							<div class="audit-trail-empty" role="status"><strong>Belum ada audit trail sesuai filter</strong><p>Perubahan filter akan menampilkan kejadian yang tersedia.</p></div>
 						{:else}
 							<div class="audit-trail-layout">
 								<div class="audit-trail-list" aria-label="Daftar audit trail keputusan">
@@ -3755,7 +4507,7 @@
 													<div class="audit-trail-item"><div><strong>{item.name}</strong><small>{item.code} Â· {item.unit}</small></div><span>{item.target}</span><span>{item.actual}</span><strong>{item.score === null ? 'Belum dihitung' : formatNumber(item.score, 1)}</strong></div>
 												{/each}
 											</div>
-										<p class="audit-trail-footnote">Audit trail ini hanya untuk membaca jejak keputusan demo. Perubahan data dilakukan melalui workflow yang berwenang.</p>
+										<p class="audit-trail-footnote">Riwayat ini hanya untuk membaca jejak keputusan. Perubahan data dilakukan melalui workflow yang berwenang.</p>
 									</article>
 								{/if}
 							</div>
@@ -3769,9 +4521,9 @@
 							<div>
 								<p class="eyebrow">ADMIN KPI / SDM</p>
 								<h2 id="period-comparison-title">Bandingkan dua periode</h2>
-								<p class="muted-copy">Baca perubahan status kontrak dan jumlah final antar-periode demo tanpa mengubah data penilaian.</p>
+								<p class="muted-copy">Baca perubahan status kontrak dan jumlah final antar-periode tanpa mengubah data penilaian.</p>
 							</div>
-							<span class="period-comparison-badge">READ-ONLY · DATA DEMO</span>
+							<span class="period-comparison-badge">READ-ONLY · PERBANDINGAN</span>
 						</div>
 
 						<div class="period-comparison-controls" aria-label="Pilih periode pembanding">
@@ -3787,13 +4539,13 @@
 						<div class="period-comparison-grid">
 							{#each [comparisonPeriodA, comparisonPeriodB] as periodId, index}
 								<article class="period-comparison-card">
-									<div class="period-comparison-card-heading"><div><p class="eyebrow">PERIODE {index === 0 ? 'A' : 'B'}</p><h3>{comparisonPeriodFor(periodId)?.name ?? 'Periode belum tersedia'}</h3><span>{comparisonPeriodFor(periodId) ? `${periodDateLabel(comparisonPeriodFor(periodId)?.startsAt ?? '')} - ${periodDateLabel(comparisonPeriodFor(periodId)?.endsAt ?? '')}` : 'Belum ada snapshot demo'}</span></div>{#if comparisonPeriodFor(periodId)}<span class={'period-status-chip period-status-' + (comparisonPeriodFor(periodId)?.status ?? 'DRAFT').toLowerCase()}>{periodStatusNames[comparisonPeriodFor(periodId)?.status ?? 'DRAFT']}</span>{/if}</div>
+									<div class="period-comparison-card-heading"><div><p class="eyebrow">PERIODE {index === 0 ? 'A' : 'B'}</p><h3>{comparisonPeriodFor(periodId)?.name ?? 'Periode belum tersedia'}</h3><span>{comparisonPeriodFor(periodId) ? `${periodDateLabel(comparisonPeriodFor(periodId)?.startsAt ?? '')} - ${periodDateLabel(comparisonPeriodFor(periodId)?.endsAt ?? '')}` : 'Belum ada ringkasan'}</span></div>{#if comparisonPeriodFor(periodId)}<span class={'period-status-chip period-status-' + (comparisonPeriodFor(periodId)?.status ?? 'DRAFT').toLowerCase()}>{periodStatusNames[comparisonPeriodFor(periodId)?.status ?? 'DRAFT']}</span>{/if}</div>
 									{#if comparisonSummaryFor(periodId)}
-										<div class="period-comparison-total"><span>Total kontrak</span><strong>{comparisonSummaryFor(periodId)?.totalContracts}</strong><small>Snapshot dummy pada periode ini</small></div>
+							<div class="period-comparison-total"><span>Total kontrak</span><strong>{comparisonSummaryFor(periodId)?.totalContracts}</strong><small>Ringkasan pada periode ini</small></div>
 										<div class="period-comparison-section"><div class="period-comparison-section-heading"><h4>Distribusi status</h4><span>Kontrak</span></div><div class="period-comparison-status-list">{#each ['DRAFT', 'SUBMITTED', 'REVISION', 'VERIFIED', 'FINAL'] as status}<div><span><i class={'monitoring-status-dot monitoring-status-' + status.toLowerCase()}></i>{statusNames[status]}</span><strong>{comparisonStatusCount(periodId, status as MonitoringStatus)}</strong><Button class="period-comparison-action" variant="outline" size="sm" onclick={() => openMonitoringDrilldown(periodId, status as MonitoringStatus)}>Lihat kontrak</Button></div>{/each}</div></div>
 										<div class="period-comparison-section"><div class="period-comparison-section-heading"><h4>Final per jalur</h4><span>{comparisonStatusCount(periodId, 'FINAL')} total</span></div><div class="period-comparison-final-list"><div><span>Pemasaran / Bisnis</span><strong>{comparisonFinalCount(periodId, 'BUSINESS')}</strong><Button class="period-comparison-action" variant="outline" size="sm" onclick={() => openMonitoringDrilldown(periodId, 'FINAL', 'BUSINESS')}>Lihat kontrak</Button></div><div><span>Operasional / Non-bisnis</span><strong>{comparisonFinalCount(periodId, 'NON_BUSINESS')}</strong><Button class="period-comparison-action" variant="outline" size="sm" onclick={() => openMonitoringDrilldown(periodId, 'FINAL', 'NON_BUSINESS')}>Lihat kontrak</Button></div></div></div>
 									{:else}
-										<div class="period-comparison-empty"><strong>Belum ada snapshot perbandingan</strong><p>Periode ini tersedia pada katalog periode, tetapi belum memiliki ringkasan demo.</p></div>
+										<div class="period-comparison-empty"><strong>Belum ada snapshot perbandingan</strong><p>Periode ini tersedia pada katalog periode, tetapi belum memiliki ringkasan.</p></div>
 									{/if}
 								</article>
 							{/each}
@@ -3812,9 +4564,9 @@
 							<div>
 								<p class="eyebrow">ADMIN KPI / SDM</p>
 								<h2 id="period-admin-title">Atur periode penilaian</h2>
-								<p class="muted-copy">Tentukan cadence, rentang tanggal, dan status awal sebelum periode dibuka untuk Pusat, Korwil, dan Cabang Contoh 001.</p>
+								<p class="muted-copy">Tentukan siklus penilaian. Realisasi KPI yang diisi memakai durasi yang sama sebelum tanggal mulai siklus.</p>
 							</div>
-							<div class="period-admin-note"><strong>Default rancangan</strong><span>3 bulan · triwulan</span></div>
+							<div class="period-admin-note"><strong>Durasi tersedia</strong><span>1, 3, 6, atau 12 bulan</span></div>
 						</div>
 
 						<div class="period-admin-grid">
@@ -3822,7 +4574,7 @@
 								<div class="period-form-section">
 									<label class="field-label" for="period-name">Nama periode</label>
 									<input id="period-name" class="text-input" type="text" bind:value={periodName} placeholder="Contoh: Triwulan I 2027" />
-									<p class="field-help">Nama ini akan tampil pada header periode dan laporan demo.</p>
+									<p class="field-help">Nama ini akan tampil pada header periode dan laporan.</p>
 								</div>
 
 								<div class="period-field-grid">
@@ -3853,14 +4605,9 @@
 									</div>
 								</fieldset>
 
-								<div class="period-form-section">
-									<label class="field-label" for="period-notes">Catatan admin <span class="optional-label">Opsional</span></label>
-									<textarea id="period-notes" class="text-input textarea-input" rows="3" bind:value={periodNotes} placeholder="Contoh: periode pembuka untuk pilot cabang contoh"></textarea>
-								</div>
-
 								<div class="period-form-footer">
-									<p><strong>Simpan sebagai data demo</strong><span>Belum dikirim ke API Laravel.</span></p>
-									<Button type="submit" class="period-save-button">Simpan periode dummy</Button>
+									<p><strong>Simpan pengaturan periode</strong><span>Rentang tanggal dihitung dari durasi yang dipilih.</span></p>
+									<Button type="submit" class="period-save-button" disabled={busy}>{busy ? 'Menyimpan...' : 'Simpan periode'}</Button>
 								</div>
 							</form>
 
@@ -3879,21 +4626,28 @@
 									<strong>{periodStatusNames[periodStatus]}</strong>
 									<p>{periodStatusDescription(periodStatus)}</p>
 								</div>
-								<p class="period-preview-footnote">Preview ini hanya mengubah state frontend sampai halaman direfresh.</p>
+								<p class="period-preview-footnote">Periode realisasi KPI: {measurementPeriodRange(periodStartDate, periodCadenceMonths)}. Contoh siklus November bulanan memakai realisasi Oktober.</p>
 							</aside>
 						</div>
 
 						<section class="period-history" aria-labelledby="period-history-title">
-							<div class="period-history-heading">
-								<div><p class="eyebrow">DATA DEMO</p><h3 id="period-history-title">Periode yang tersedia</h3></div>
-								<span class="period-history-count">{demoPeriods.length} contoh</span>
+									<div class="period-history-heading">
+										<div><p class="eyebrow">PERIODE PENILAIAN</p><h3 id="period-history-title">Periode yang tersedia</h3></div>
+								<span class="period-history-count">{configuredPeriods.length} periode</span>
 							</div>
 							<div class="period-history-list">
-								{#each demoPeriods as period (period.id)}
-									<button type="button" class="period-history-row" onclick={() => selectDemoPeriod(period)}>
+								{#each configuredPeriods as period (period.id)}
+									<div class="period-history-row">
 										<span class="period-history-copy"><strong>{period.name}</strong><small>{periodCadenceLabel(period.cadenceMonths)} · {periodDateLabel(period.startsAt)} – {periodDateLabel(period.endsAt)}</small></span>
-										<span class={'period-status-chip period-status-' + period.status.toLowerCase()}>{periodStatusNames[period.status]}</span>
-									</button>
+										<div class="period-history-actions">
+											<span class={'period-status-chip period-status-' + period.status.toLowerCase()}>{periodStatusNames[period.status]}</span>
+											<label class="sr-only" for={'period-status-' + period.id}>Status {period.name}</label>
+											<select id={'period-status-' + period.id} class="text-input period-status-select" value={cycleStatusDrafts[period.id] ?? period.status} onchange={(event) => setCycleStatusDraft(period.id, event.currentTarget.value as PeriodStatus)}>
+												{#each periodStatusOptions as status}<option value={status}>{periodStatusNames[status]}</option>{/each}
+											</select>
+											<Button size="sm" variant="outline" disabled={busy || (cycleStatusDrafts[period.id] ?? period.status) === period.status} onclick={() => void saveCycleStatus(period)}>Simpan status</Button>
+										</div>
+									</div>
 								{/each}
 							</div>
 						</section>
@@ -3902,17 +4656,17 @@
 					<section class="history-panel" aria-labelledby="history-title">
 						<div class="history-heading">
 							<div>
-								<p class="eyebrow">DATA DEMO · READ-ONLY</p>
+				<p class="eyebrow">RIWAYAT SAYA</p>
 								<h2 id="history-title">Riwayat penilaian</h2>
-								<p class="muted-copy">Lihat jejak periode {staffTrackLabel().toLocaleLowerCase('id-ID')} tanpa mengubah nilai atau keputusan yang sudah tercatat.</p>
+								<p class="muted-copy">Status, skor, dan tahapan penilai untuk setiap periode Anda.</p>
 							</div>
-							<span class="history-scope">{visibleHistoryEntries().length} periode contoh</span>
+							<span class="history-scope">{visibleHistoryEntries().length} penilaian</span>
 						</div>
 
 						{#if visibleHistoryEntries().length === 0}
 							<div class="history-empty" role="status">
-								<strong>Belum ada riwayat untuk jalur ini</strong>
-								<p>Riwayat akan muncul setelah self-assignment dan proses penilaian tersedia.</p>
+									<strong>Belum ada penilaian</strong>
+									<p>KPI akan muncul otomatis dari jabatan saat periode penilaian dibuka.</p>
 							</div>
 						{:else}
 							<div class="history-layout">
@@ -3924,23 +4678,42 @@
 												<Badge variant={statusVariant(entry.status)}>{statusNames[entry.status]}</Badge>
 											</div>
 											<span>{entry.cadence} · {formatDate(entry.startsAt)} – {formatDate(entry.endsAt)}</span>
-											<div class="history-entry-meta"><span>Skor {entry.score === null ? 'belum dihitung' : formatNumber(entry.score, 1)}</span><span>{entry.finalDate ? 'Final ' + formatDate(entry.finalDate) : entry.submittedDate ? 'Diajukan ' + formatDate(entry.submittedDate) : 'Belum diajukan'}</span></div>
+							<div class="history-entry-meta"><span>Skor {entry.score === null ? 'belum dihitung' : formatNumber(entry.score, 1)}</span><span>{entry.status === 'DRAFT' && entry.submittedDate ? 'Disusun ' + formatDate(entry.submittedDate) : entry.finalDate ? 'Final ' + formatDate(entry.finalDate) : entry.submittedDate ? 'Diajukan ' + formatDate(entry.submittedDate) : 'Belum diajukan'}</span></div>
 										</button>
 									{/each}
 								</div>
 
 								{#if selectedHistory()}
+									{@const historyEntry = selectedHistory()!}
 									<article class="history-detail" aria-labelledby="history-detail-title">
 										<div class="history-detail-heading">
 											<div><p class="eyebrow">DETAIL PERIODE</p><h3 id="history-detail-title">{selectedHistory()?.periodName}</h3></div>
 											<Badge variant={statusVariant(selectedHistory()?.status ?? 'DRAFT')}>{statusNames[selectedHistory()?.status ?? 'DRAFT']}</Badge>
 										</div>
 										<div class="history-facts">
-											<div><span>Jalur</span><strong>{historyTrackLabel(selectedHistory()?.track ?? 'BUSINESS')}</strong></div>
+						<div><span>Jabatan</span><strong>{currentUser?.position_name ?? 'Jabatan Anda'}</strong></div>
 											<div><span>Rentang</span><strong>{formatDate(selectedHistory()?.startsAt ?? '')} – {formatDate(selectedHistory()?.endsAt ?? '')}</strong></div>
-											<div><span>Skor demo</span><strong>{selectedHistory()?.score === null ? 'Belum dihitung' : formatNumber(selectedHistory()?.score ?? null, 1)}</strong></div>
+						<div><span>Skor</span><strong>{selectedHistory()?.score === null ? 'Belum dihitung' : formatNumber(selectedHistory()?.score ?? null, 1)}</strong></div>
 											<div><span>Reviewer</span><strong>{selectedHistory()?.reviewer ?? 'Belum ditetapkan'}</strong></div>
 										</div>
+									{#if historyEntry.review_workflow}
+										<div class="history-review-progress">
+											<strong>Posisi proses penilaian</strong>
+											<div class="reviewer-preview-list">
+												{#each ['P1', 'P2'] as slot}
+													{@const reviewer = historyEntry.review_workflow.reviewer_slots[slot as 'P1' | 'P2']}
+													<div><span>Penilai {slot.slice(1)}</span><strong>{reviewer?.name ?? 'Tidak tersedia'}</strong><small>{reviewer?.position_name ?? ''} {reviewer ? '· ' + reviewerSlotStatus(historyEntry, slot as 'P1' | 'P2') : ''}</small></div>
+												{/each}
+											</div>
+										</div>
+									{/if}
+									{#if historyEntry.review_history?.length}
+										<ol class="assessment-review-history-list history-review-list">
+											{#each historyEntry.review_history as event, index (`${event.reviewer_employee_id}-${event.created_at ?? index}`)}
+												<li><div><strong>{event.reviewer_name}</strong><span>{event.slot ? `Penilai ${event.slot.slice(1)}` : 'Admin'}</span></div><p>{reviewerDecisionLabel(event.decision)} · {event.comment}</p><time>{formatDateTime(event.created_at)}</time></li>
+											{/each}
+										</ol>
+									{/if}
 										<div class="history-readonly-note"><strong>Catatan proses</strong><p>{selectedHistory()?.note}</p></div>
 										<div class="history-items" aria-label="Indikator pada penilaian">
 											<div class="history-items-heading"><span>Indikator</span><span>Target</span><span>Realisasi</span><span>Skor</span></div>
@@ -3948,7 +4721,7 @@
 												<div class="history-item-row"><div><strong>{item.name}</strong><small>{item.code} · {item.unit}</small></div><span>{item.target}</span><span>{item.actual}</span><strong>{item.score === null ? '—' : formatNumber(item.score, 1)}</strong></div>
 											{/each}
 										</div>
-										<p class="history-detail-footnote">Detail ini hanya untuk membaca snapshot demo. Perubahan dilakukan dari alur KPI aktif, bukan dari riwayat.</p>
+						<p class="history-detail-footnote">Detail ini menampilkan snapshot penilaian pada periode tersebut, termasuk posisi proses dan keputusan reviewer.</p>
 									</article>
 								{/if}
 							</div>
@@ -3958,194 +4731,36 @@
 					<section class="assignment-panel" aria-labelledby="assignment-title">
 						<div class="assignment-heading">
 							<div>
-								<p class="eyebrow">SELF-ASSIGNMENT · {staffTrackLabel()}</p>
-								<h2 id="assignment-title">Susun KPI untuk diri sendiri</h2>
-								<p class="muted-copy">{staffTrackDescription()} KPI baru tidak dibuat bebas; gunakan katalog yang sudah disiapkan Admin.</p>
+								<p class="eyebrow">KPI JABATAN · {staffTrackLabel()}</p>
+								<h2 id="assignment-title">Pilih periode pengisian</h2>
+								<p class="muted-copy">Periode yang dibuka Admin tampil di sini. Pilih satu periode untuk mulai atau melanjutkan pengisian KPI jabatan Anda.</p>
 							</div>
-							{#if activeMonthlyCycle()}
-								<div class="assignment-period"><strong>{activeMonthlyCycle()?.name}</strong><span>{monthlyCycleDateRange()}</span></div>
-							{/if}
 						</div>
-
-						<div class="assignment-steps" aria-label="Tahap self-assignment">
-							<div class="assignment-step active"><span>1</span><strong>Pilih KPI</strong><small>Katalog yang ditetapkan Admin</small></div>
-							<div class="assignment-step"><span>2</span><strong>Lengkapi realisasi</strong><small>Setelah draf tersimpan</small></div>
-							<div class="assignment-step"><span>3</span><strong>Ajukan</strong><small>Menunggu reviewer</small></div>
-						</div>
-
-						{#if !activeMonthlyCycle()}
-							<div class="assignment-state" role="note">
-								<strong>Belum ada periode KPI yang dibuka</strong>
-								<p>Self-assignment dapat disusun setelah Admin membuka periode KPI aktif.</p>
-							</div>
-						{:else if existingMonthlyContract()}
-							<div class="assignment-state">
-								<strong>Kontrak untuk periode ini sudah tersedia</strong>
-								<p>Buka kontrak yang ada untuk melihat KPI dan melanjutkan pengisian.</p>
-								<Button variant="outline" onclick={() => void openExistingMonthlyContract()}>Buka kontrak</Button>
-							</div>
-						{:else if catalogLoading}
-							<div class="assignment-state" role="status"><p>Memuat katalog KPI...</p></div>
-						{:else if !catalogLoaded}
-							<div class="assignment-state">
-								<strong>Katalog KPI belum dimuat</strong>
-								<p>Ambil daftar indikator aktif untuk jabatan Anda.</p>
-								<Button variant="outline" onclick={() => void openSelfAssignment()}>Muat katalog KPI</Button>
-							</div>
-						{:else if staffAssignmentMappingState() === 'INACTIVE'}
-							<div class="assignment-state assignment-state-warning" role="status">
-								<strong>Mapping jabatan sedang nonaktif</strong>
-								<p>Admin menonaktifkan mapping untuk {currentStaffPositionMapping()?.name}. Self-assignment tidak dapat menampilkan KPI sampai jabatan diaktifkan kembali.</p>
-							</div>
-						{:else if staffAssignmentMappingState() === 'ACTIVE_EMPTY' || kpiDefinitions.length === 0}
-							<div class="assignment-state">
-								<strong>Belum ada mapping KPI Aktif untuk jabatan ini</strong>
-								<p>{currentStaffPositionMapping()?.name ?? 'Jabatan Anda'} belum memiliki indikator Aktif. Admin dapat memilih KPI dan menyimpan mapping dari Master Jabatan.</p>
-							</div>
-						{:else}
-							<form class="assignment-form" onsubmit={(event) => { event.preventDefault(); void createSelfAssignment(); }}>
-								<div class="assignment-guidance">
-									<p>Pilih indikator yang paling sesuai dengan pekerjaan Anda dari mapping Admin. KPI Draft atau indikator di luar jalur ini tidak ditampilkan.</p>
-									<p>Target dan bobot inherited dari penetapan Admin, jadi staf hanya memilih indikator dan tidak mengubah nilainya.</p>
-								</div>
-								<div class="assignment-inherited-note" role="note">
-									<strong>Penetapan aktif</strong>
-									<span>{staffTrackLabel()} · target dan bobot read-only · sumber data mengikuti katalog Admin</span>
-								</div>
-								{#if currentStaffPositionMapping()}
-									<div class="assignment-position-context" role="note">
-										<div>
-											<span class="dashboard-label">MAPPING JABATAN</span>
-											<strong>{currentStaffPositionMapping()?.name}</strong>
-											<p>{currentStaffPositionMapping()?.orgUnitName} · {positionTrackLabel(currentStaffPositionMapping()?.track ?? 'BUSINESS')}</p>
-										</div>
-										<span class={'assignment-position-status assignment-position-status-' + currentStaffPositionMapping()?.status.toLowerCase()}>{positionStatusLabel(currentStaffPositionMapping()?.status ?? 'INACTIVE')}</span>
-									</div>
-								{/if}
-								{#if staffAssignmentStatus !== 'NONE'}
-									<div class="assignment-workflow-summary" role="status" aria-live="polite">
-										<div><span class="dashboard-label">STATUS SELF-ASSESSMENT</span><strong>{staffAssignmentStatusLabel()}</strong></div>
-										<p>{staffAssignmentStatus === 'SUBMITTED' ? 'Pilihan KPI terkunci sampai reviewer memberi keputusan.' : staffAssignmentStatus === 'REVISION' ? 'Reviewer meminta perbaikan. Buka ulang draf untuk mengubah pilihan sebelum diajukan ulang.' : staffAssignmentStatus === 'VERIFIED' ? 'Reviewer sudah memverifikasi snapshot. Tidak ada input yang dapat diubah.' : staffAssignmentStatus === 'FINAL' ? 'Penilaian sudah final. Snapshot ini hanya dapat dibaca.' : 'Draf tersimpan di browser demo. Ajukan saat pilihan sudah siap.'}</p>
-									</div>
-								{/if}
-								{#if staffAssignmentStatus === 'REVISION' && currentStaffReviewDecision()}
-									<div class="assignment-revision-note" role="alert">
-										<div><span class="dashboard-label">CATATAN REVIEWER</span><strong>Perlu diperbaiki sebelum diajukan ulang</strong></div>
-										<p>{currentStaffReviewDecision()?.note}</p>
-										<Button variant="outline" onclick={reopenStaffAssignment}>Buka ulang draf</Button>
-									</div>
-								{/if}
-
-								<div class="kpi-selection-list" aria-label="Katalog KPI sesuai jabatan">
-									{#each kpiDefinitions as definition (definition.id)}
-										<article class="kpi-choice-row" class:selected={selectedDefinitionIds.includes(definition.id)}>
-											<label class="kpi-selector">
-												<input
-													type="checkbox"
-													checked={selectedDefinitionIds.includes(definition.id)}
-																							disabled={['SUBMITTED', 'REVISION', 'VERIFIED', 'FINAL'].includes(staffAssignmentStatus)}
-													onchange={(event) => toggleDefinition(definition.id, event.currentTarget.checked)}
-												/>
-												<span class="kpi-selector-copy">
-															<strong>{definitionDisplayName(definition)}</strong>
-													<span>{definition.group} | {definition.code} | {definition.unit}</span>
-													<small>{definition.definition}</small>
-												</span>
-											</label>
-											{#if selectedDefinitionIds.includes(definition.id)}
-												<label class="target-entry">
-													<span>Target inherited <small>{definition.unit}</small></span>
-													<input
-														class="text-input"
-														type="number"
-														min={definition.type === 'Z' ? 0 : 0.0001}
-														max={['Q', 'L'].includes(definition.type) ? 100 : undefined}
-														step="any"
-														required
-														readonly
-														value={targetDrafts[definition.id] ?? ''}
-													/>
-												</label>
-												<p class="inherited-weight">Bobot inherited <strong>{formatNumber(definition.default_weight * 100, 2)}%</strong></p>
-											{:else}
-												<p class="target-sample">Target {formatNumber(definition.sample_target)} {definition.unit} · Bobot {formatNumber(definition.default_weight * 100, 2)}%</p>
-											{/if}
-										</article>
-									{/each}
-								</div>
-
-								<div class="assignment-footer">
-									<p><strong>{selectedDefinitionIds.length} indikator dipilih</strong><span>{staffAssignmentStatus === 'SUBMITTED' ? 'Self-assessment sudah diajukan.' : staffAssignmentStatus === 'REVISION' ? 'Draf terkunci sampai dibuka ulang.' : staffAssignmentStatus === 'VERIFIED' ? 'Self-assessment sudah diverifikasi reviewer.' : staffAssignmentStatus === 'FINAL' ? 'Snapshot final tersimpan sebagai read-only.' : staffAssignmentStatus === 'DRAFT' ? 'Draf tersimpan. Anda masih dapat mengubah pilihan.' : 'Bobot mengikuti penetapan Admin.'}</span></p>
-									{#if ['SUBMITTED', 'VERIFIED', 'FINAL'].includes(staffAssignmentStatus)}
-										<span class="assignment-submitted-lock">{staffAssignmentStatus === 'FINAL' ? 'Final terkunci' : staffAssignmentStatus === 'VERIFIED' ? 'Terverifikasi, menunggu finalisasi' : 'Terkunci untuk review'}</span>
-									{:else if staffAssignmentStatus === 'REVISION'}
-										<Button class="assignment-submit" variant="outline" onclick={reopenStaffAssignment}>Buka ulang draf</Button>
-									{:else}
-										<div class="assignment-footer-actions">
-											<Button class="assignment-submit" disabled={busy || selectedDefinitionIds.length === 0} onclick={createSelfAssignment}>
-												{busy ? 'Menyimpan draf...' : staffAssignmentStatus === 'DRAFT' ? 'Simpan ulang draf' : 'Simpan draf KPI'}
-											</Button>
-													<Button class="assignment-submit assignment-submit-secondary" variant="outline" disabled={busy || staffAssignmentStatus !== 'DRAFT' || selectedDefinitionIds.length === 0} onclick={submitSelfAssessment}>{currentStaffReviewDecision()?.decision === 'REVISION' ? 'Ajukan ulang self-assessment' : 'Ajukan self-assessment'}</Button>
-										</div>
-									{/if}
-								</div>
-							</form>
-						{/if}
-					</section>
-				{:else if view === 'mine' && canViewStaffHistory()}
-					<section class="kpi-work-panel" aria-labelledby="kpi-work-title">
+						{@render openInputCycleCards()}
+					</section>{:else if view === 'mine' && canViewStaffHistory() && !selectedContract}
+					<section class="kpi-work-panel" id="staff-workspace-tab-panel" role="tabpanel" tabindex="0" aria-labelledby={'staff-tab-' + staffWorkspaceTab.toLowerCase()}>
 						<div class="kpi-work-heading">
 							<div>
 								<p class="eyebrow">KPI SAYA · {staffTrackLabel()}</p>
-								<h2 id="kpi-work-title">Ruang kerja indikator aktif</h2>
-								<p class="muted-copy">Isi realisasi, bukti, dan catatan dari periode yang sedang berjalan. Nilai di bawah masih bersifat demo.</p>
+								<h2 id="kpi-work-title">{staffWorkspaceTab === 'KPI' ? 'Periode KPI yang perlu diisi' : staffWorkspaceTab === 'BEHAVIOR' ? 'Penilaian perilaku' : staffWorkspaceTab === 'APPROVAL' ? 'Periksa penilaian' : 'Riwayat tindakan'}</h2>
+								<p class="muted-copy">{staffWorkspaceTab === 'KPI' ? 'Pilih periode yang dibuka Admin untuk mulai mengisi KPI sesuai jabatan Anda.' : staffWorkspaceTab === 'BEHAVIOR' ? 'Lima indikator perilaku dinilai pada skala 1 sampai 5.' : staffWorkspaceTab === 'APPROVAL' ? 'Periksa skor KPI, perilaku, dan nilai akhir gabungan.' : 'Lihat catatan perubahan dan keputusan pada penilaian Anda.'}</p>
 							</div>
-							{#if dashboard?.cycle}<span class="kpi-work-period">{dashboard.cycle.name}</span>{/if}
+							{#if staffWorkspaceTab === 'KPI'}
+								<div class="kpi-work-heading-actions">
+									{#if openInputCycles().length > 0}<span class="kpi-work-period">{openInputCycles().length} periode dibuka</span>{/if}
+									<Button size="sm" variant="outline" disabled={busy} onclick={() => void refreshWorkspace()}>Perbarui daftar</Button>
+								</div>
+							{/if}
 						</div>
 
-						{#if currentStaffReadOnlyOutcome()}
-							<section class="kpi-readonly-panel" aria-labelledby="kpi-readonly-title">
-								<div class="kpi-readonly-header">
-									<div>
-										<p class="eyebrow">SNAPSHOT PENILAIAN Â· READ-ONLY</p>
-										<h3 id="kpi-readonly-title">KPI periode ini sudah {currentStaffReadOnlyOutcome() === 'FINAL' ? 'final' : 'terverifikasi'}</h3>
-										<p>Nilai dan bukti yang tampil adalah salinan saat reviewer mengambil keputusan. Tidak ada input yang dapat diubah dari halaman ini.</p>
-									</div>
-									<Badge variant="secondary">{currentStaffReadOnlyOutcome() === 'FINAL' ? 'FINAL' : 'VERIFIED'}</Badge>
-								</div>
-								<div class="kpi-readonly-facts">
-									<div><span>Periode</span><strong>{currentStaffReadOnlyRecord()?.periodName}</strong></div>
-									<div><span>Jalur</span><strong>{staffTrackLabel()}</strong></div>
-									<div><span>Reviewer</span><strong>Kepala Cabang Demo 001</strong></div>
-									<div><span>{currentStaffReadOnlyOutcome() === 'FINAL' ? 'Difinalisasi' : 'Diverifikasi'}</span><strong>{formatDateTime(currentStaffReadOnlyFinalDate() ?? currentStaffReviewDecision()?.savedAt ?? null)}</strong></div>
-								</div>
-								<div class="kpi-readonly-note"><strong>Catatan keputusan</strong><p>{currentStaffReadOnlyReviewerNote()}</p></div>
-								<div class="kpi-readonly-items" aria-label="Snapshot indikator KPI saya">
-									<div class="kpi-readonly-items-heading"><span>Indikator</span><span>Target</span><span>Realisasi</span><span>Skor</span></div>
-									{#each currentStaffAssignmentRecord()?.items ?? [] as item (item.code)}
-										<div class="kpi-readonly-item">
-											<div><strong>{item.name}</strong><small>{item.code} Â· {item.unit}</small></div>
-											<span>{item.target}</span><span>{item.actual}</span><strong>{item.score === null ? 'Belum dihitung' : formatNumber(item.score, 1)}</strong>
-										</div>
-									{/each}
-								</div>
-								<div class="kpi-readonly-footer"><span>Snapshot terkunci untuk menjaga jejak keputusan reviewer.</span><Button variant="outline" onclick={openHistory}>Lihat riwayat penilaian</Button></div>
-							</section>
-						{:else if !staffDashboardContract()}
+						{#if staffWorkspaceTab !== 'KPI'}
 							<div class="kpi-work-empty" role="status">
-								<strong>Belum ada KPI aktif untuk periode ini</strong>
-								<p>Mulai dari self-assignment untuk memilih indikator dan mengusulkan target sesuai jalur kerja Anda.</p>
-								<Button onclick={() => void openSelfAssignment()}>Susun KPI sekarang</Button>
+								<strong>{staffWorkspaceTab === 'BEHAVIOR' ? 'Belum ada penilaian perilaku aktif' : staffWorkspaceTab === 'APPROVAL' ? 'Belum ada penilaian untuk diperiksa' : 'Belum ada tindakan pada periode ini'}</strong>
+								<p>{staffWorkspaceTab === 'HISTORY' ? 'Riwayat tindakan akan tampil setelah penilaian dibuka atau ada keputusan reviewer.' : staffWorkspaceTab === 'APPROVAL' ? 'Lengkapi KPI dan perilaku untuk melihat nilai gabungannya.' : 'Mulai atau buka penilaian KPI untuk melihat bagian ini.'}</p>
+								{#if staffWorkspaceTab === 'HISTORY'}<Button variant="outline" onclick={openHistory}>Buka riwayat saya</Button>{:else}<Button onclick={() => void openSelfAssignment()}>Buka penilaian KPI</Button>{/if}
 							</div>
 						{:else}
-							<div class="kpi-work-summary" aria-label="Ringkasan kontrak KPI saya">
-								<div><span>Status</span><strong>{staffDashboardAssignmentLabel()}</strong><Badge variant={statusVariant(staffDashboardContract()?.status ?? 'DRAFT')}>{statusNames[staffDashboardContract()?.status ?? 'DRAFT']}</Badge></div>
-								<div><span>Progres indikator</span><strong>{staffDashboardProgress().completed} dari {staffDashboardProgress().total}</strong><small>{staffDashboardProgress().percent}% lengkap</small></div>
-								<div><span>Realisasi</span><strong>{staffDashboardRealizationSummary()}</strong><small>Target dan bukti per indikator</small></div>
-							</div>
-							{#if !selectedContract}
-								<div class="kpi-work-open-state"><p>Detail KPI belum dibuka.</p><Button class="kpi-work-open-button" variant="outline" onclick={() => void openMine()}>Buka indikator</Button></div>
-							{/if}
+							{@render openInputCycleCards()}
 						{/if}
 					</section>
 				{:else if view === 'reviews' && canReviewInbox()}
@@ -4213,18 +4828,18 @@
 										<div class="review-task-facts">
 											<div><span>Periode</span><strong>{selectedReviewTask()?.periodName}</strong></div>
 											<div><span>Usia</span><strong>{reviewAgeLabel(selectedReviewTask()?.ageDays ?? 0)} dalam antrean</strong></div>
-											<div><span>Skor demo</span><strong>{selectedReviewTask()?.score === null ? 'Belum dihitung' : formatNumber(selectedReviewTask()?.score ?? null, 1)}</strong></div>
+											<div><span>Skor KPI</span><strong>{selectedReviewTask()?.score === null ? 'Belum dihitung' : formatNumber(selectedReviewTask()?.score ?? null, 1)}</strong></div>
 											<div><span>Deadline</span><strong>{formatDate(selectedReviewTask()?.dueAt ?? '')}</strong></div>
 										</div>
-										<div class="review-task-note"><strong>{selectedReviewTask()?.lastAction}</strong><p>Periksa capaian, bukti, dan penjelasan staf sebelum memilih keputusan. Semua angka di panel ini masih dummy.</p></div>
+				<div class="review-task-note"><strong>{selectedReviewTask()?.lastAction}</strong><p>Periksa capaian, bukti, dan penjelasan staf sebelum memilih keputusan.</p></div>
 										<div class="review-item-detail-list" aria-label="Snapshot indikator dan bukti staf">
 											{#each selectedReviewTask()?.items ?? [] as item (item.code)}
 												<article class="review-item-detail">
-													<div class="review-item-heading"><div><span class="review-item-code">{item.code} / {item.unit}</span><h4>{item.name}</h4></div><strong>{item.score === null ? 'Belum dihitung' : formatNumber(item.score, 1)}<small>skor demo</small></strong></div>
+													<div class="review-item-heading"><div><span class="review-item-code">{item.code} / {item.unit}</span><h4>{item.name}</h4></div><strong>{item.score === null ? 'Belum dihitung' : formatNumber(item.score, 1)}<small>skor KPI</small></strong></div>
 													<div class="review-item-facts">
 														<div><span>Target</span><strong>{item.target} {item.unit}</strong></div>
 														<div><span>Realisasi</span><strong>{item.actual} {item.unit}</strong></div>
-														<div><span>Bukti</span><strong>{item.evidence ?? 'Referensi demo belum dicatat'}</strong></div>
+														<div><span>Bukti</span><strong>{item.evidence ?? 'Referensi belum dicatat'}</strong></div>
 													</div>
 													<div class="review-item-note"><span>Catatan staf</span><p>{item.note ?? 'Staf belum menambahkan catatan.'}</p></div>
 												</article>
@@ -4232,11 +4847,11 @@
 										</div>
 
 										<div class="review-decision-box">
-											<div class="review-decision-heading"><div><p class="eyebrow">KEPUTUSAN DUMMY</p><h4>Catat keputusan reviewer</h4></div>{#if selectedReviewFinalization()}<Badge variant="secondary">FINAL</Badge>{:else if selectedReviewDecision()}<Badge variant={statusVariant(selectedReviewDecision()?.decision ?? 'VERIFIED')}>{statusNames[selectedReviewDecision()?.decision ?? 'VERIFIED']}</Badge>{/if}</div>
+				<div class="review-decision-heading"><div><p class="eyebrow">KEPUTUSAN REVIEWER</p><h4>Catat keputusan reviewer</h4></div>{#if selectedReviewFinalization()}<Badge variant="secondary">FINAL</Badge>{:else if selectedReviewDecision()}<Badge variant={statusVariant(selectedReviewDecision()?.decision ?? 'VERIFIED')}>{statusNames[selectedReviewDecision()?.decision ?? 'VERIFIED']}</Badge>{/if}</div>
 											<label class="review-decision-field" for="review-decision-note">Catatan keputusan reviewer<textarea id="review-decision-note" class="text-input textarea-input" bind:value={reviewDecisionNote} rows="4" placeholder="Tulis alasan yang bisa ditindaklanjuti staf." readonly={Boolean(selectedReviewFinalization())}></textarea></label>
-											<p class="review-decision-hint">Catatan wajib diisi. Tombol di bawah hanya menyimpan state demo di browser.</p>
+											<p class="review-decision-hint">Catatan wajib diisi. Tombol di bawah menyimpan keputusan penilai.</p>
 											{#if !selectedReviewFinalization()}<div class="review-decision-actions"><Button variant="destructive" disabled={!reviewDecisionNote.trim()} onclick={() => saveDemoReviewDecision('REVISION')}>Minta revisi</Button><Button disabled={!reviewDecisionNote.trim()} onclick={() => saveDemoReviewDecision('VERIFIED')}>Verifikasi</Button></div>{/if}
-											{#if selectedReviewDecision()}<div class="review-decision-result" role="status"><strong>State dummy tersimpan</strong><p>{selectedReviewDecision()?.note}</p><small>Disimpan {formatDateTime(selectedReviewDecision()?.savedAt ?? null)}</small></div>{/if}
+				{#if selectedReviewDecision()}<div class="review-decision-result" role="status"><strong>Keputusan tersimpan</strong><p>{selectedReviewDecision()?.note}</p><small>Disimpan {formatDateTime(selectedReviewDecision()?.savedAt ?? null)}</small></div>{/if}
 											{#if selectedReviewDecision()?.decision === 'VERIFIED' && !selectedReviewFinalization()}<div class="review-finalize-actions"><Button onclick={saveDemoFinalization}>Finalisasi dan kunci snapshot</Button><span>Setelah finalisasi, keputusan dan snapshot tidak dapat diubah.</span></div>{/if}
 											{#if selectedReviewFinalization()}<div class="review-finalization-result" role="status"><strong>Snapshot sudah final dan terkunci</strong><p>{selectedReviewFinalization()?.note}</p><small>Difinalisasi {formatDateTime(selectedReviewFinalization()?.finalizedAt ?? null)}</small></div>{/if}
 										</div>
@@ -4246,10 +4861,11 @@
 						{/if}
 					</section>
 				{:else}
+				{#if !selectedContract}
 				<section class="contract-panel" aria-labelledby="contract-list-title">
 					<div class="panel-heading">
 						<div>
-							<p class="eyebrow">SIKLUS DEMO</p>
+							<p class="eyebrow">PERIODE PENILAIAN</p>
 							<h2 id="contract-list-title">{view === 'mine' ? 'Kontrak milik Anda' : view === 'reviews' ? 'Antrean tindakan' : 'Kontrak KPI'}</h2>
 							<p class="muted-copy">{view === 'reviews' ? 'Kontrak yang menjadi tanggung jawab reviewer aktif.' : 'Daftar mengikuti identitas dan cakupan akses saat ini.'}</p>
 						</div>
@@ -4259,14 +4875,14 @@
 					{#if visibleContracts().length > 0}
 						<div class="table-scroll">
 							<table>
-								<thead><tr><th scope="col">Pegawai</th><th scope="col">Jabatan dan unit</th><th scope="col">Status</th><th scope="col">Skor KPI demo</th><th scope="col"><span class="sr-only">Detail</span></th></tr></thead>
+								<thead><tr><th scope="col">Pegawai</th><th scope="col">Jabatan dan unit</th><th scope="col">Status</th><th scope="col">Nilai akhir</th><th scope="col"><span class="sr-only">Detail</span></th></tr></thead>
 								<tbody>
 									{#each visibleContracts() as contract (contract.id)}
 										<tr>
 											<td><strong class="table-primary">{contract.employee_name ?? contract.org_unit_name}</strong><span class="table-secondary">{contract.id}</span></td>
 											<td><strong class="table-primary">{contract.position_name ?? 'Unit kerja'}</strong><span class="table-secondary">{contract.org_unit_name}</span></td>
 											<td><Badge variant={statusVariant(contract.status)}>{statusNames[contract.status]}</Badge></td>
-											<td><strong class="score-cell">{formatNumber(contract.score?.kpi_score ?? null, 1)}</strong></td>
+										<td><strong class="score-cell">{formatNumber(contract.score?.final_score ?? null, 1)}</strong></td>
 											<td class="table-action"><Button variant="outline" size="sm" onclick={() => openContract(contract.id)}>Buka</Button></td>
 										</tr>
 									{/each}
@@ -4276,87 +4892,176 @@
 					{:else}
 						<div class="empty-state">
 							<strong>{view === 'reviews' ? 'Tidak ada kontrak di antrean ini' : 'Belum ada kontrak di cakupan ini'}</strong>
-							<p>Ganti identitas demo atau buka bagian KPI saya untuk melihat contoh alur lain.</p>
+							<p>Pilih profil lain atau buka riwayat penilaian.</p>
 							{#if view !== 'overview'}<Button variant="outline" onclick={() => setView('overview')}>Lihat ringkasan</Button>{/if}
 						</div>
 					{/if}
 				</section>
+				{/if}
 
 				{#if selectedContract}
-					<section class="detail-panel" aria-labelledby="contract-detail-title">
+					{@const kpiPreview = kpiScorePreview(selectedContract)}
+					{@const completedKpis = kpiPreview?.completedItems ?? 0}
+					{@const totalKpis = selectedContract.items.length}
+					{@const completionPercent = totalKpis > 0 ? Math.round((completedKpis / totalKpis) * 100) : 0}
+					<section class="detail-panel" id={view === 'mine' ? 'staff-workspace-tab-panel' : undefined} role={view === 'mine' ? 'tabpanel' : undefined} tabindex={view === 'mine' ? 0 : undefined} aria-labelledby={view === 'mine' ? 'staff-tab-' + staffWorkspaceTab.toLowerCase() : 'contract-detail-title'}>
 						<div class="panel-heading detail-heading">
-							<div><p class="eyebrow">DETAIL KONTRAK · {selectedContract.id}</p><h2 id="contract-detail-title">{selectedContract.employee_name ?? selectedContract.org_unit_name}</h2><p class="muted-copy">{selectedContract.position_name} · {selectedContract.org_unit_name}</p></div>
-							<div class="detail-heading-actions"><Badge variant={statusVariant(selectedContract.status)}>{statusNames[selectedContract.status]}</Badge><Button variant="ghost" size="sm" onclick={() => (selectedContract = null)}>Tutup</Button></div>
+							<div><p class="eyebrow">DETAIL KONTRAK · {selectedContract.id}</p><h2 id="contract-detail-title">{selectedContract.employee_name ?? selectedContract.org_unit_name}</h2><p class="muted-copy">{selectedContract.position_name} · {selectedContract.org_unit_name}</p><p class="measurement-period-note"><strong>Periode realisasi yang dinilai:</strong> {contractMeasurementRange(selectedContract)}</p>{#if selectedContract.position_kpi_version}<p class="measurement-period-note"><strong>Versi indikator jabatan:</strong> V{selectedContract.position_kpi_version}</p>{/if}</div>
+							<div class="detail-heading-actions"><Badge variant={statusVariant(selectedContract.status)}>{statusNames[selectedContract.status]}</Badge><Button variant="ghost" size="sm" onclick={closeSelectedContract}>Tutup</Button></div>
 						</div>
 
-						{#if isBranchSelfAssessment()}
+						{#if isBranchSelfAssessment() && view !== 'mine'}
 							<section class="assessment-flow" aria-labelledby="assessment-flow-title">
 								<div class="assessment-flow-heading"><div><p class="eyebrow">SELF-ASSESSMENT BERTAHAP</p><h3 id="assessment-flow-title">Lengkapi sebelum diajukan</h3></div><span class="assessment-flow-count">Tahap {assessmentStep} dari 3</span></div>
 								<div class="assessment-stepper" role="list" aria-label="Tahap self-assessment">
-									<button type="button" class:active={assessmentStep === 1} class:complete={assessmentStep > 1} onclick={() => moveAssessmentStep(1)}><span>1</span><strong>Realisasi</strong><small>Isi capaian</small></button>
-									<button type="button" class:active={assessmentStep === 2} class:complete={assessmentStep > 2} onclick={() => moveAssessmentStep(2)}><span>2</span><strong>Bukti</strong><small>Referensi & catatan</small></button>
-									<button type="button" class:active={assessmentStep === 3} onclick={() => moveAssessmentStep(3)}><span>3</span><strong>Review</strong><small>Ringkasan submit</small></button>
+									<button type="button" class:active={assessmentStep === 1} class:complete={assessmentStep > 1} onclick={() => void moveAssessmentStep(1)}><span>1</span><strong>Isi KPI</strong><small>Realisasi & bukti</small></button>
+									<button type="button" class:active={assessmentStep === 2} class:complete={assessmentStep > 2} onclick={() => void moveAssessmentStep(2)}><span>2</span><strong>Perilaku</strong><small>Lima indikator</small></button>
+									<button type="button" class:active={assessmentStep === 3} onclick={() => void moveAssessmentStep(3)}><span>3</span><strong>Periksa</strong><small>Ringkasan penilaian</small></button>
 								</div>
 								<p class="assessment-flow-hint">{assessmentStepHint()}</p>
 							</section>
 						{/if}
 
-						<div class="score-strip">
-							<div><span>Skor KPI demo</span><strong>{formatNumber(selectedContract.score?.kpi_score ?? null, 1)}</strong></div>
-							<div><span>Bobot valid</span><strong>{formatNumber((selectedContract.score?.valid_weight ?? 0) * 100)}%</strong></div>
-							<div><span>Nilai akhir</span><strong>Belum dihitung</strong></div>
-							<p>{selectedContract.score?.message ?? 'Formula versi ' + (selectedContract.score?.formula_version ?? 'demo-prototype-v1') + ' hanya digunakan untuk demo.'}</p>
-						</div>
+						{#if canReviewSubmitted(selectedContract)}<div class="review-correction-notice"><strong>Penilai dapat merevisi nilai langsung.</strong><span>Perubahan nilai KPI maupun perilaku dihitung ulang dan penilaian diteruskan ke tahap berikutnya. Setiap koreksi wajib disertai alasan.</span></div>{/if}
 
+						{#if view !== 'mine' || staffWorkspaceTab === 'KPI' || staffWorkspaceTab === 'BEHAVIOR' || staffWorkspaceTab === 'APPROVAL'}
+						<div class="scorecard-layout">
+						<div class="scorecard-main">
+						{#if view === 'mine' ? staffWorkspaceTab === 'KPI' || staffWorkspaceTab === 'APPROVAL' : !isBranchSelfAssessment() || assessmentStep !== 2}
+						{#if view === 'mine' && staffWorkspaceTab === 'APPROVAL'}
+							<div class="assessment-review-heading assessment-kpi-heading"><div><p class="eyebrow">RINCIAN KPI</p><h3>Nilai setiap indikator</h3></div><span>{selectedContract.items.length} indikator</span></div>
+						{/if}
 						<div class="metric-list">
 							{#each selectedContract.items as item (item.id)}
+								{@const draftActual = assessmentFieldValue(item, 'actual').trim()}
 								<article class="metric-card">
 									<div class="metric-heading">
 										<div><span class="metric-code">{item.code} · {item.score_type}</span><h3>{item.name}</h3></div>
-										<div class="metric-result"><strong>{formatNumber(item.score, 1)}</strong><span>skor demo</span></div>
+										<div class="metric-result"><strong>{formatNumber(weightedItemScorePreview(item), 1)}</strong><span>{isItemScorePreview(item) ? 'pratinjau berbobot' : 'kontribusi berbobot'}</span><small>{formatNumber(itemScorePreview(item), 1)} × {formatNumber(item.weight * 100)}% bobot</small></div>
 									</div>
 									<div class="metric-facts">
 										<div><span>Target</span><strong>{formatNumber(item.target, 2)} {item.unit}</strong></div>
-										<div><span>Realisasi</span><strong>{item.actual === null ? 'Belum diisi' : formatNumber(item.actual, 2) + ' ' + item.unit}</strong></div>
+										<div><span>Realisasi</span><strong>{draftActual === '' ? 'Belum diisi' : formatNumber(Number(draftActual), 2) + ' ' + item.unit}</strong></div>
 										<div><span>Bobot</span><strong>{formatNumber(item.weight * 100)}%</strong></div>
-										<div><span>Status data</span><Badge variant={item.state === 'VALID' ? 'secondary' : 'outline'}>{item.state === 'VALID' ? 'Lengkap' : item.state === 'NOT_APPLICABLE' ? 'Tidak berlaku' : 'Belum lengkap'}</Badge></div>
+										<div><span>Status data</span><Badge variant={itemDraftComplete(item) ? 'secondary' : 'outline'}>{item.state === 'NOT_APPLICABLE' ? 'Tidak berlaku' : itemDraftComplete(item) ? (itemDirty(item) ? 'Siap disimpan' : 'Lengkap') : 'Belum lengkap'}</Badge></div>
 									</div>
 
-									{#if (canEditActual(selectedContract) || canEditTarget(selectedContract)) && (!isBranchSelfAssessment() || assessmentStep !== 3)}
+										{#if (canEditActual(selectedContract) || canEditTarget(selectedContract) || canReviewSubmitted(selectedContract)) && (!isBranchSelfAssessment() || assessmentStep !== 3) && (view !== 'mine' || staffWorkspaceTab === 'KPI')}
 										<div class="metric-edit">
-											{#if canEditActual(selectedContract) && (!isBranchSelfAssessment() || assessmentStep === 1)}
-												<label><span>Realisasi</span><input class="text-input" type="number" step="any" bind:value={edits[item.id].actual} /></label>
+											{#if (canEditActual(selectedContract) || canReviewSubmitted(selectedContract)) && (!isBranchSelfAssessment() || assessmentStep === 1)}
+										<label><span>{canReviewSubmitted(selectedContract) ? 'Koreksi realisasi periode data' : 'Realisasi total periode data'}</span><input class="text-input" type="number" step="any" bind:value={edits[item.id].actual} /></label>
 											{/if}
-											{#if canEditActual(selectedContract) && (!isBranchSelfAssessment() || assessmentStep === 2)}
-												<label><span>Referensi bukti demo</span><input class="text-input" type="text" bind:value={edits[item.id].evidence} placeholder="Contoh: DEMO-EVIDENCE-0001" /></label>
+											{#if canEditActual(selectedContract) && (!isBranchSelfAssessment() || assessmentStep === 1)}
+												<label><span>Referensi bukti</span><input class="text-input" type="text" bind:value={edits[item.id].evidence} placeholder="Nomor dokumen atau tautan bukti" /></label>
 												<label class="wide-field"><span>Catatan</span><input class="text-input" type="text" bind:value={edits[item.id].note} /></label>
+											{/if}
+											{#if canReviewSubmitted(selectedContract)}
+												<label class="wide-field"><span>Alasan koreksi KPI <b aria-hidden="true">*</b></span><input class="text-input" type="text" bind:value={edits[item.id].reason} placeholder="Jelaskan alasan perubahan nilai ini" /></label>
 											{/if}
 											{#if canEditTarget(selectedContract)}
 												<label><span>Target baru</span><input class="text-input" type="number" step="any" bind:value={edits[item.id].target} /></label>
 												<label><span>Bobot (%)</span><input class="text-input" type="number" min="0.01" max="100" step="0.01" bind:value={edits[item.id].weightPercent} /></label>
 												<label class="wide-field"><span>Alasan perubahan target/bobot</span><input class="text-input" type="text" bind:value={edits[item.id].reason} placeholder="Wajib jika target atau bobot diubah" /></label>
 											{/if}
-											<div class="metric-save"><Button size="sm" disabled={busy || !itemDirty(item)} onclick={() => saveItem(item)}>Simpan item</Button></div>
+											<div class="metric-save"><Button size="sm" disabled={busy || !canSaveItem(item)} onclick={() => saveItem(item)}>{canReviewSubmitted(selectedContract) ? 'Simpan koreksi KPI' : 'Simpan item'}</Button></div>
 										</div>
 									{/if}
 								</article>
 							{/each}
 						</div>
+						{/if}
 
-						{#if isBranchSelfAssessment() && assessmentStep === 3}
-							<section class="assessment-review-summary" aria-labelledby="assessment-review-title">
-								<div class="assessment-review-heading"><div><p class="eyebrow">RINGKASAN PENGAJUAN</p><h3 id="assessment-review-title">Periksa sebelum submit</h3></div><span>Read-only</span></div>
-								<div class="assessment-review-facts">
-									<div><span>Indikator</span><strong>{selectedContract.items.length} KPI</strong></div>
-									<div><span>Realisasi</span><strong>{selectedContract.items.filter((item) => item.actual !== null).length}/{selectedContract.items.length} terisi</strong></div>
-									<div><span>Bukti</span><strong>{selectedContract.items.filter((item) => item.evidence.length > 0).length}/{selectedContract.items.length} tersedia</strong></div>
-									<div><span>Reviewer</span><strong>{selectedContract.reviewer_employee_id ? 'Sudah ditetapkan' : 'Belum ditetapkan'}</strong></div>
+						{#if (view === 'mine' ? staffWorkspaceTab === 'BEHAVIOR' || staffWorkspaceTab === 'APPROVAL' : (isBranchSelfAssessment() && assessmentStep === 2) || canReviewSubmitted(selectedContract))}
+							<section class="behavior-evaluation-panel" aria-labelledby="behavior-evaluation-title">
+								<div class="behavior-evaluation-heading"><div><p class="eyebrow">PENILAIAN PERILAKU · BOBOT 20%</p><h3 id="behavior-evaluation-title">{view === 'mine' && staffWorkspaceTab === 'APPROVAL' ? 'Penilaian akhir perilaku' : 'Nilai lima perilaku kerja'}</h3><p>Gunakan skala 1–5. Nilai 3 berarti memenuhi standar.</p></div><Badge variant="outline">{view === 'mine' && staffWorkspaceTab === 'APPROVAL' ? 'Tinjauan baca saja' : 'Sama untuk semua jabatan'}</Badge></div>
+								<div class="behavior-criteria-list">
+									{#each behaviorCriteria as criterion, index (criterion.key)}
+										<fieldset class="behavior-criterion">
+											<legend>{index + 1}. {criterion.label}</legend>
+											<div class="behavior-rating-options" role="group" aria-label={'Nilai ' + criterion.label}>
+												{#each [1, 2, 3, 4, 5] as rating}
+											<button type="button" disabled={view === 'mine' ? staffWorkspaceTab !== 'BEHAVIOR' : !isBranchSelfAssessment() && !canReviewSubmitted(selectedContract)} class:selected={behaviorDraft[criterion.key] === String(rating)} aria-pressed={behaviorDraft[criterion.key] === String(rating)} onclick={() => (behaviorDraft = { ...behaviorDraft, [criterion.key]: String(rating) })}>{rating}</button>
+												{/each}
+											</div>
+											{#if behaviorDraft[criterion.key] === '3'}<p class="behavior-rating-hint">Memenuhi standar</p>{:else if behaviorDraft[criterion.key]}<p class="behavior-rating-hint">Nilai {behaviorDraft[criterion.key]} dipilih</p>{:else}<p class="behavior-rating-hint">Belum dinilai</p>{/if}
+										</fieldset>
+									{/each}
 								</div>
-								{#if assessmentSubmitBlockedReason(selectedContract)}<p class="assessment-review-warning">{assessmentSubmitBlockedReason(selectedContract)}</p>{/if}
+								{#if canReviewSubmitted(selectedContract)}
+									<div class="behavior-revision-actions">
+										<label for="behavior-revision-comment">Alasan koreksi perilaku <b aria-hidden="true">*</b></label>
+										<textarea id="behavior-revision-comment" class="text-input textarea-input" bind:value={behaviorRevisionComment} rows="3" placeholder="Jelaskan aspek yang dikoreksi dan dasar penilaiannya"></textarea>
+										<Button disabled={busy || !behaviorDraftDirty() || !behaviorRevisionComment.trim()} onclick={saveBehaviorEvaluation}>Simpan koreksi perilaku</Button>
+									</div>
+								{/if}
 							</section>
 						{/if}
 
-						{#if selectedContract.comments.length > 0}
+						{#if view !== 'mine' && isBranchSelfAssessment() && assessmentStep === 3}
+							{@const kpiScoreForReview = kpiPreview?.score ?? selectedContract.score?.kpi_score ?? null}
+							{@const behaviorScoreForReview = summaryBehaviorScore()}
+							{@const finalScoreForReview = summaryFinalScore() ?? selectedContract.score?.final_score ?? null}
+							{@const canSubmitReview = selectedContract.status === 'DRAFT' || selectedContract.status === 'REVISION'}
+							<section class="assessment-review-summary" aria-labelledby="assessment-review-title">
+								<div class="assessment-review-heading"><div><p class="eyebrow">{canSubmitReview ? 'RINGKASAN PENGAJUAN' : 'RINGKASAN NILAI'}</p><h3 id="assessment-review-title">{canSubmitReview ? 'Periksa sebelum diajukan' : 'Nilai gabungan penilaian'}</h3></div><span>Nilai otomatis</span></div>
+								<div class="assessment-review-facts">
+									<div><span>Indikator</span><strong>{selectedContract.items.length} KPI</strong></div>
+									<div><span>Realisasi</span><strong>{selectedContract.items.filter((item) => assessmentFieldValue(item, 'actual').trim()).length}/{selectedContract.items.length} terisi</strong></div>
+									<div><span>Bukti</span><strong>{selectedContract.items.filter((item) => assessmentFieldValue(item, 'evidence').trim()).length}/{selectedContract.items.length} tersedia</strong></div>
+									<div><span>Skor KPI</span><strong>{formatNumber(kpiScoreForReview, 2)}</strong></div>
+									<div><span>Kontribusi KPI - 80%</span><strong>{formatNumber(scoreContribution(kpiScoreForReview, 0.8), 2)}</strong><small>Dari maksimal 80 poin</small></div>
+									<div><span>Skor perilaku</span><strong>{formatNumber(behaviorScoreForReview, 2)}</strong><small>{behaviorRatingsCompletedCount()}/5 indikator dinilai</small></div>
+									<div><span>Kontribusi perilaku - 20%</span><strong>{formatNumber(scoreContribution(behaviorScoreForReview, 0.2), 2)}</strong><small>Dari maksimal 20 poin</small></div>
+									<div class="assessment-review-total"><span>{finalScoreForReview !== null && !isFinalScoreReady() ? 'Nilai akhir sementara' : 'Nilai akhir'}</span><strong>{finalScoreForReview === null ? 'Belum dihitung' : formatNumber(finalScoreForReview, 2)}</strong></div>
+								</div>
+								{#if canSubmitReview && assessmentSubmitBlockedReason(selectedContract)}<p class="assessment-review-warning">{assessmentSubmitBlockedReason(selectedContract)}</p>{/if}
+							</section>
+						{/if}
+						</div>
+
+						<Card.Root class="score-summary-card" aria-labelledby="score-summary-title">
+							<Card.Header class="score-summary-header">
+								<Card.Title id="score-summary-title">Ringkasan penilaian</Card.Title>
+							</Card.Header>
+							<Card.Content class="score-summary-content">
+								<div class="score-completion"><span>KPI lengkap</span><strong>{completedKpis} / {totalKpis}</strong></div>
+								<div class="score-progress" role="progressbar" aria-label="KPI lengkap" aria-valuemin="0" aria-valuemax={Math.max(totalKpis, 1)} aria-valuenow={completedKpis}>
+									<span style={`width: ${completionPercent}%`}></span>
+								</div>
+								<div class="score-component"><span>{kpiPreview && kpiPreview.pendingItems > 0 ? 'Skor KPI sementara' : 'Skor hasil · 80%'}</span><strong>{formatNumber(kpiPreview?.score ?? null, 2)}</strong></div>
+				<div class="score-component"><span>{behaviorRatingsCompletedCount() > 0 && behaviorRatingsCompletedCount() < behaviorCriteria.length ? 'Perilaku sementara · 20%' : 'Perilaku · 20%'}</span><strong>{formatNumber(summaryBehaviorScore(), 2)}</strong></div>
+								<div class="score-final"><span>{summaryFinalScore() !== null && !isFinalScoreReady() ? 'Nilai akhir sementara' : 'Nilai akhir'}</span><strong class:score-final-pending={summaryFinalScore() === null}>{formatNumber(summaryFinalScore(), 2)}</strong></div>
+								{#if selectedContract.score?.rating}<Badge variant="secondary" class="score-rating">{selectedContract.score.rating}</Badge>{/if}
+								<p class="score-summary-message">{kpiPreviewMessage(selectedContract)}{behaviorRatingsCompletedCount() === 0 ? ' Isi nilai perilaku untuk menghitung komponennya.' : behaviorRatingsCompletedCount() < behaviorCriteria.length ? ` Skor perilaku sementara dari ${behaviorRatingsCompletedCount()}/${behaviorCriteria.length} indikator.` : ''}{summaryFinalScore() !== null && !isFinalScoreReady() ? ' Nilai akhir sementara mengikuti input yang sudah dinilai.' : ''}</p>
+								<p class="score-summary-footnote">Bobot KPI 80% + perilaku 20%. Bobot KPI valid: {kpiPreview ? formatNumber(kpiPreview.validWeight * 100) + '%' : 'Belum tersedia'}</p>
+							</Card.Content>
+						</Card.Root>
+						</div>
+						{/if}
+
+						{#if selectedContract.review_workflow && (view !== 'mine' || staffWorkspaceTab === 'HISTORY')}
+							<section class="assessment-review-history" aria-labelledby="assessment-review-history-title">
+								<div class="assessment-review-heading"><div><p class="eyebrow">ALUR PERSETUJUAN</p><h3 id="assessment-review-history-title">{view === 'mine' && staffWorkspaceTab === 'APPROVAL' ? 'Persetujuan penilaian' : 'Riwayat penilai'}</h3></div><Badge variant={statusVariant(selectedContract.status)}>{statusNames[selectedContract.status]}</Badge></div>
+								<p class="assessment-review-history-current">{selectedContract.status === 'SUBMITTED' && selectedContract.review_workflow.current_slot ? `Sedang menunggu Penilai ${selectedContract.review_workflow.current_slot.slice(1)}.` : selectedContract.status === 'REVISION' ? 'Dikembalikan untuk perbaikan oleh pegawai.' : selectedContract.status === 'FINAL' ? 'Seluruh tahapan penilaian selesai.' : 'Urutan penilai ditentukan otomatis dari hirarki jabatan.'}</p>
+								<div class="reviewer-preview-list">
+									{#each ['P1', 'P2'] as slot}
+										{@const reviewer = selectedContract.review_workflow.reviewer_slots[slot as 'P1' | 'P2']}
+										<div><span>Penilai {slot.slice(1)}</span><strong>{reviewer?.name ?? 'Tidak tersedia'}</strong><small>{reviewer?.position_name ?? ''} {reviewer ? '· ' + reviewerSlotStatus(selectedContract, slot as 'P1' | 'P2') : ''}</small></div>
+									{/each}
+								</div>
+								{#if selectedContract.review_history?.length}
+									<ol class="assessment-review-history-list">
+										{#each selectedContract.review_history as event, index (`${event.reviewer_employee_id}-${event.created_at ?? index}`)}
+											<li><div><strong>{event.reviewer_name}</strong><span>{event.slot ? `Penilai ${event.slot.slice(1)}` : 'Admin'}</span></div><p>{reviewerDecisionLabel(event.decision)} · {event.comment}</p><time>{formatDateTime(event.created_at)}</time></li>
+										{/each}
+									</ol>
+								{:else}
+									<p class="assessment-review-history-empty">Belum ada keputusan penilai.</p>
+								{/if}
+							</section>
+						{/if}
+
+						{#if selectedContract.comments.length > 0 && (view !== 'mine' || staffWorkspaceTab === 'HISTORY')}
 							<section class="comments-section" aria-labelledby="comments-title">
 								<h3 id="comments-title">Catatan kontrak</h3>
 								{#each selectedContract.comments as comment (comment.id)}
@@ -4365,6 +5070,7 @@
 							</section>
 						{/if}
 
+						{#if view !== 'mine' || staffWorkspaceTab === 'HISTORY'}
 						<section class="audit-section" aria-labelledby="audit-title">
 							<h3 id="audit-title">Riwayat tindakan</h3>
 							{#if auditLoadFailed}
@@ -4389,30 +5095,30 @@
 								</ol>
 							{/if}
 						</section>
+						{/if}
 
-						{#if isBranchSelfAssessment()}
+						{#if isBranchSelfAssessment() && (view !== 'mine' || (staffWorkspaceTab === 'APPROVAL' && (selectedContract.status === 'DRAFT' || selectedContract.status === 'REVISION')))}
 							<section class="workflow-box assessment-workflow-box">
 								{#if assessmentStep === 3}
 									<label for="comment-draft">Catatan untuk reviewer <span class="optional-label">Opsional</span></label>
 									<textarea id="comment-draft" class="text-input textarea-input" bind:value={commentDraft} rows="3" placeholder="Tambahkan konteks singkat sebelum pengajuan"></textarea>
 									{#if assessmentSubmitBlockedReason(selectedContract)}<p class="workflow-hint">{assessmentSubmitBlockedReason(selectedContract)}</p>{/if}
 									<div class="workflow-actions">
-										<Button variant="outline" onclick={() => moveAssessmentStep(2)}>Kembali ke bukti</Button>
+										<Button variant="outline" onclick={() => { if (view === 'mine') void selectStaffWorkspaceTab('BEHAVIOR'); else void moveAssessmentStep(2); }}>Kembali ke perilaku</Button>
 										<Button variant="outline" disabled={busy || !commentDraft.trim()} onclick={addComment}>Simpan catatan</Button>
-										<Button disabled={busy || Boolean(assessmentSubmitBlockedReason(selectedContract))} onclick={submitContract}>Ajukan self-assessment</Button>
+										<Button disabled={busy || Boolean(assessmentSubmitBlockedReason(selectedContract))} onclick={submitContract}>Kirim penilaian</Button>
 									</div>
 								{:else}
-									<p class="workflow-hint">{assessmentStepHint()}</p>
 									<div class="workflow-actions">
-										{#if assessmentStep === 2}<Button variant="outline" onclick={() => moveAssessmentStep(1)}>Kembali ke realisasi</Button>{/if}
-										<Button disabled={Boolean(assessmentNextBlockedReason(selectedContract))} onclick={() => moveAssessmentStep(assessmentStep === 1 ? 2 : 3)}>{assessmentStep === 1 ? 'Lanjut ke bukti' : 'Lihat ringkasan'}</Button>
+											{#if assessmentStep === 2}<Button variant="outline" onclick={() => void moveAssessmentStep(1)}>Kembali ke isi KPI</Button>{/if}
+											<Button disabled={Boolean(assessmentNextBlockedReason(selectedContract))} onclick={() => void moveAssessmentStep(assessmentStep === 1 ? 2 : 3)}>{assessmentStep === 1 ? 'Lanjut ke perilaku' : 'Periksa penilaian'}</Button>
 									</div>
 								{/if}
 							</section>
-						{:else if selectedContract.status === 'DRAFT' || selectedContract.status === 'REVISION'}
+						{:else if view !== 'mine' && (selectedContract.status === 'DRAFT' || selectedContract.status === 'REVISION')}
 							<section class="workflow-box">
 								<label for="comment-draft">Tambah komentar</label>
-								<textarea id="comment-draft" class="text-input textarea-input" bind:value={commentDraft} rows="3" placeholder="Tulis usulan atau catatan untuk kontrak demo"></textarea>
+								<textarea id="comment-draft" class="text-input textarea-input" bind:value={commentDraft} rows="3" placeholder="Tulis usulan atau catatan untuk penilaian"></textarea>
 								{#if submitBlockedReason(selectedContract)}<p class="workflow-hint">{submitBlockedReason(selectedContract)}</p>{/if}
 								<div class="workflow-actions">
 									<Button variant="outline" disabled={busy || !commentDraft.trim()} onclick={addComment}>Kirim komentar</Button>
@@ -4424,7 +5130,7 @@
 							<section class="workflow-box">
 								<label for="review-comment">Catatan keputusan reviewer</label>
 								<textarea id="review-comment" class="text-input textarea-input" bind:value={reviewComment} rows="3" placeholder="Catatan wajib disimpan bersama keputusan"></textarea>
-								<div class="workflow-actions"><Button variant="outline" disabled={busy || !reviewComment.trim()} onclick={() => reviewContract('REVISION')}>Minta revisi</Button><Button disabled={busy || !reviewComment.trim()} onclick={() => reviewContract('VERIFIED')}>Verifikasi</Button></div>
+								<div class="workflow-actions"><Button disabled={busy || !reviewComment.trim()} onclick={() => reviewContract('VERIFIED')}>{reviewerVerifyLabel(selectedContract)}</Button></div>
 							</section>
 						{/if}
 						{#if selectedContract.status === 'VERIFIED' && hasAccessRole('SDM')}
@@ -4441,14 +5147,5 @@
 		</div>
 	</div>
 
-	<nav class="mobile-nav" class:with-assignment={canSelfAssignRole()} class:with-admin={hasAdminAccess()} class:with-history={canViewStaffHistory()} aria-label="Navigasi ringkas">
-		<button class:active={view === 'overview'} aria-current={view === 'overview' ? 'page' : undefined} onclick={() => setView('overview')}><span aria-hidden="true">▦</span><small>{canViewStaffHistory() ? 'Dashboard' : 'Ringkasan'}</small></button>
-		<button class:active={view === 'mine'} aria-current={view === 'mine' ? 'page' : undefined} onclick={() => void openMine()}><span aria-hidden="true">◎</span><small>KPI saya</small></button>
-		{#if canSelfAssignRole()}<button class:active={view === 'assignment'} aria-current={view === 'assignment' ? 'page' : undefined} onclick={() => void openSelfAssignment()}><span aria-hidden="true">+</span><small>Susun KPI</small></button>{/if}
-		{#if canViewStaffHistory()}<button class:active={view === 'history'} aria-current={view === 'history' ? 'page' : undefined} onclick={openHistory}><span aria-hidden="true">▤</span><small>Riwayat</small></button>{/if}
-		<button class:active={view === 'reviews'} aria-current={view === 'reviews' ? 'page' : undefined} onclick={() => (canReviewInbox() ? openReviews() : setView('reviews'))}><span aria-hidden="true">✓</span><small>{canReviewInbox() ? 'Inbox' : 'Tinjauan'}</small></button>
-		{#if hasAdminAccess()}<button class:active={view === 'monitoring'} aria-current={view === 'monitoring' ? 'page' : undefined} onclick={openMonitoring}><span aria-hidden="true">◴</span><small>Monitor</small></button><button class:active={view === 'catalog'} aria-current={view === 'catalog' ? 'page' : undefined} onclick={openCatalog}><span aria-hidden="true">≡</span><small>Katalog</small></button><button class:active={view === 'mapping'} aria-current={view === 'mapping' ? 'page' : undefined} onclick={openAssignmentMapping}><span aria-hidden="true">↳</span><small>Set KPI</small></button><button class:active={view === 'positions'} aria-current={view === 'positions' ? 'page' : undefined} onclick={openPositions}><span aria-hidden="true">J</span><small>Jabatan</small></button><button class:active={view === 'periods'} aria-current={view === 'periods' ? 'page' : undefined} onclick={() => setView('periods')}><span aria-hidden="true">◷</span><small>Periode</small></button>{/if}
-		{#if hasAdminAccess()}<button class:active={view === 'audit'} aria-current={view === 'audit' ? 'page' : undefined} onclick={openAuditTrail}><span aria-hidden="true">A</span><small>Audit</small></button><button class:active={view === 'comparison'} aria-current={view === 'comparison' ? 'page' : undefined} onclick={openPeriodComparison}><span aria-hidden="true">%</span><small>Banding</small></button>{/if}
-		{#if hasAdminAccess()}<button class:active={view === 'ssoMappings'} aria-current={view === 'ssoMappings' ? 'page' : undefined} onclick={openSsoMappings}><span aria-hidden="true">S</span><small>Mapping SSO</small></button>{/if}
-	</nav>
+
 {/if}

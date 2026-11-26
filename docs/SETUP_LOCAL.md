@@ -1,6 +1,6 @@
 # Setup Local dan Pindah Laptop
 
-Panduan ini adalah checklist resmi untuk menjalankan prototype KPI Perbankan di laptop baru. Prototype saat ini memakai Laravel REST API, SvelteKit, data dummy, dan SQLite untuk development lokal.
+Panduan ini adalah checklist resmi untuk menjalankan prototype KPI Perbankan di laptop baru. Prototype saat ini memakai Laravel REST API, SvelteKit, data simulasi, dan SQLite untuk development lokal.
 
 ## 1. Yang perlu dipindahkan dari laptop lama
 
@@ -73,7 +73,9 @@ php artisan db:seed
 
 `db:seed` membangun ulang data sintetis untuk local demo. Jangan menjalankannya pada database produksi atau database UAT yang berisi data penting.
 
-Untuk mencoba login SSO lokal, isi variabel `APP`, `TOKEN_APP`, dan `URL_SSO` di `backend/.env`. `SSO_ISSUER` opsional; jika kosong, URL SSO dipakai sebagai issuer mapping. Simpan semua nilai ini hanya di backend dan jangan menaruhnya di `frontend/.env.local` atau repository.
+Untuk mencoba login SSO lokal, isi variabel `APP` dan `TOKEN_APP` di `backend/.env`. `URL_SSO` sudah diarahkan ke `https://devsso.bkkjateng.co.id`; `SSO_ISSUER` opsional dan jika kosong URL SSO dipakai sebagai issuer mapping. `SIMPEG_API_BASE_URL` disiapkan untuk endpoint direktori SIMPEG pada host yang sama. Simpan semua rahasia hanya di backend dan jangan menaruhnya di `frontend/.env.local` atau repository.
+
+Spesifikasi endpoint SIMPEG yang dibutuhkan untuk master jabatan, pegawai, penempatan aktif, dan unit kerja ada di [kebutuhan API SIMPEG](simpeg-api-contract.md). Login pegawai dan profil `whoami` sudah memakai `/api/auth/login` serta `/api/auth/whoami`; endpoint daftar organisasi masih menunggu konfirmasi dari pemilik API.
 
 Login SSO memerlukan baris `sso_identities` yang menghubungkan `issuer` + `employee_id` dari layanan identitas ke satu pegawai KPI lokal. Login akan ditolak bila mapping belum ada atau tidak aktif. Admin KPI dapat membuat dan menonaktifkan mapping dari menu `Mapping SSO` setelah masuk dengan user demo Admin.
 
@@ -145,19 +147,19 @@ Verifikasi API dari terminal lain:
 curl.exe -I http://127.0.0.1:8100/up
 ```
 
-Login prototype menyediakan mode Akun kerja SSO dan User demo. Mode SSO memanggil endpoint identitas dari backend Laravel, menggunakan ID pegawai serta password, lalu mengambil profil melalui token Bearer server-side. Token tidak dikirim ke browser. Akun SSO yang belum dipetakan ke pegawai KPI lokal belum dapat membuka workspace.
+Login prototype menyediakan mode Akun kerja SSO dan Identitas simulasi. Mode SSO memanggil endpoint identitas dari backend Laravel, menggunakan ID pegawai serta password, lalu mengambil profil melalui token Bearer server-side. Token tidak dikirim ke browser. Akun SSO yang belum dipetakan ke pegawai KPI lokal belum dapat membuka workspace.
 
 ## 8. Troubleshooting singkat
 
 - `500` saat login: cek backend aktif di port `8100`, lalu cek `VITE_API_PROXY_TARGET`.
-- Data dummy kosong: jalankan `php artisan db:seed` dari folder `backend`.
+- Data simulasi kosong: jalankan `php artisan db:seed` dari folder `backend`.
 - Port bentrok: gunakan port lain dan samakan `VITE_API_PROXY_TARGET`, `FRONTEND_ORIGINS`, serta `SANCTUM_STATEFUL_DOMAINS`.
 - `npm` diblokir PowerShell: gunakan `npm.cmd`.
 - Perubahan CRUD mapping Step 27 hilang setelah refresh: itu memang frontend-only dan belum disimpan ke backend.
 
 ## 9. Titik lanjut project
 
-Setelah setup selesai, baca [status.md](../status.md). Status terakhir mencatat Step 27 selesai dan rekomendasi berikutnya adalah Step 28: preview dampak perubahan mapping KPI per jabatan.
+Setelah setup selesai, baca [status.md](../status.md). Fokus pengembangan saat ini adalah self-assignment dan riwayat milik pengguna untuk staf, Kepala Sub Bidang, Kepala Cabang, dan Korwil.
 
 Saat melanjutkan pekerjaan, gunakan urutan referensi berikut:
 

@@ -1581,6 +1581,8 @@ flowchart TD
 
 **Usulan default kalender** adalah triwulan kalender (Jan-Mar, Apr-Jun, Jul-Sep, Okt-Des); ini perlu konfirmasi karena pengguna baru menetapkan durasi 3 bulan, bukan tanggal kalender resmi. Untuk setiap periode, sistem menyimpan: `measurement_start/end`, `source_cutoff_at`, `data_validation_deadline`, `self_assessment_open/deadline`, `review_deadline`, `finalization_deadline`, `locked_at`.
 
+**Keputusan untuk pilot KCU:** jendela pengukuran memakai durasi yang sama tepat sebelum awal siklus penilaian, dan berakhir sehari sebelum siklus dimulai. Jadi siklus bulanan November mengukur realisasi 1–31 Oktober; siklus tiga bulan yang mulai November mengukur Agustus–Oktober. Tanggal siklus tetap menjadi jendela pengisian dan review. Prototype menurunkan jendela realisasi dari `starts_at` dan cadence; penyimpanan tanggal pengukuran serta cut-off sumber tetap menjadi kebutuhan lanjutan.
+
 **BR-51.** `measurement_end` membatasi tanggal bisnis yang diukur; `source_cutoff_at` membatasi koreksi sumber yang masih dapat dipakai sebagai snapshot resmi. Keduanya adalah konsep berbeda dan tidak boleh dipertukarkan.
 
 **BR-52.** Setelah cut-off, perubahan sumber memicu perbandingan versi dan anomaly report, bukan pemutakhiran otomatis terhadap penilaian yang sudah final. Koreksi resmi membentuk versi nilai baru lengkap dengan alasan dan approval.
